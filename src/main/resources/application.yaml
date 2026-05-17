@@ -15,3 +15,7 @@ spring:
         format_sql: true
   main:
     allow-bean-definition-overriding: true
+
+groq:
+  api:
+    key: ${GROQ_API_KEY:}
