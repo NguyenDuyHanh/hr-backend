@@ -12,20 +12,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "tbl_user_ext")
+@Table(name = "tbl_user")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserExt implements UserDetails {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class User extends BaseModel implements UserDetails {
 
     @Column(name = "username", unique = true, nullable = false)
     private String username;

@@ -14,11 +14,7 @@ import java.util.UUID;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Department {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class Department extends BaseModel {
 
     @Column(name = "code", unique = true, nullable = false)
     private String code;

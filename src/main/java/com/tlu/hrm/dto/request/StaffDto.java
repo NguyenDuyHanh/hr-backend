@@ -1,5 +1,6 @@
 package com.tlu.hrm.dto.request;
 
+import com.tlu.hrm.model.Staff;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,4 +32,31 @@ public class StaffDto {
     private String departmentName;
     private UUID positionId;
     private String positionName;
+
+    public StaffDto(Staff entity) {
+        if (entity != null) {
+            this.id = entity.getId();
+            this.staffCode = entity.getStaffCode();
+            this.displayName = entity.getDisplayName();
+            this.birthDate = entity.getBirthDate();
+            this.gender = entity.getGender();
+            this.phoneNumber = entity.getPhoneNumber();
+            this.email = entity.getEmail();
+            this.workingStatus = entity.getWorkingStatus();
+            this.idNumber = entity.getIdNumber();
+            this.recruitmentDate = entity.getRecruitmentDate();
+            this.startDate = entity.getStartDate();
+            this.currentAddress = entity.getCurrentAddress();
+            this.socialInsuranceCode = entity.getSocialInsuranceCode();
+            this.level = entity.getLevel();
+            if (entity.getDepartment() != null) {
+                this.departmentId = entity.getDepartment().getId();
+                this.departmentName = entity.getDepartment().getName();
+            }
+            if (entity.getPosition() != null) {
+                this.positionId = entity.getPosition().getId();
+                this.positionName = entity.getPosition().getName();
+            }
+        }
+    }
 }
