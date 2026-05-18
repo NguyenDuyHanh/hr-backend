@@ -1,13 +1,18 @@
 package com.tlu.hrm.service.impl;
 
 import com.tlu.hrm.dto.request.StaffDto;
+import com.tlu.hrm.dto.search.SearchDto;
 import com.tlu.hrm.model.Staff;
 import com.tlu.hrm.repository.DepartmentRepository;
-import com.tlu.hrm.repository.PositionTitleRepository;
+import com.tlu.hrm.repository.PositionRepository;
 import com.tlu.hrm.repository.StaffRepository;
 import com.tlu.hrm.service.StaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,35 +29,91 @@ public class StaffServiceImpl implements StaffService {
     private DepartmentRepository departmentRepository;
 
     @Autowired
-    private PositionTitleRepository positionTitleRepository;
+    private PositionRepository positionRepository;
 
     @Override
-    public List<StaffDto> getAllStaffs() {
+    public Page<StaffDto> getAllStaffs(SearchDto searchDto) {
+        List<Staff> filteredList = staffRepository.findAll().stream()
+                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .filter(staff -> {
+                    if (searchDto != null) {
+                        // 1. Keyword search
+                        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
+                            String keyword = searchDto.getKeyword().toLowerCase();
+                            boolean matches = (staff.getStaffCode() != null && staff.getStaffCode().toLowerCase().contains(keyword))
+                                || (staff.getDisplayName() != null && staff.getDisplayName().toLowerCase().contains(keyword))
+                                || (staff.getEmail() != null && staff.getEmail().toLowerCase().contains(keyword))
+                                || (staff.getPhoneNumber() != null && staff.getPhoneNumber().contains(keyword));
+                            if (!matches) return false;
+                        }
+                        // 2. Department filter
+                        if (searchDto.getDepartmentId() != null) {
+                            if (staff.getDepartment() == null || !staff.getDepartment().getId().equals(searchDto.getDepartmentId())) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+
+        int total = filteredList.size();
+        int pageNum = 0;
+        int size = 10;
+
+        if (searchDto != null) {
+            pageNum = searchDto.getPageIndex() >= 1 ? searchDto.getPageIndex() - 1 : 0;
+            size = searchDto.getPageSize() > 0 ? searchDto.getPageSize() : 10;
+        }
+
+        int fromIndex = pageNum * size;
+        int toIndex = Math.min(fromIndex + size, total);
+
+        List<StaffDto> pageContent = new java.util.ArrayList<>();
+        if (fromIndex < total) {
+            pageContent = filteredList.subList(fromIndex, toIndex).stream()
+                    .map(StaffDto::new)
+                    .collect(Collectors.toList());
+        }
+
+        return new PageImpl<>(pageContent, PageRequest.of(pageNum, size), total);
+    }
+
+    @Override
+    public List<StaffDto> getAllStaffsUnpaginated() {
         return staffRepository.findAll().stream()
-                .map(this::toDto)
+                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .map(StaffDto::new)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<StaffDto> getStaffById(UUID id) {
-        return staffRepository.findById(id).map(this::toDto);
+        return staffRepository.findById(id)
+                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .map(StaffDto::new);
     }
 
     @Override
     public StaffDto saveStaff(StaffDto staffDto) {
         Staff staff = toEntity(staffDto);
         Staff savedStaff = staffRepository.save(staff);
-        return toDto(savedStaff);
+        return new StaffDto(savedStaff);
     }
 
     @Override
     public void deleteStaff(UUID id) {
-        staffRepository.deleteById(id);
+        staffRepository.findById(id).ifPresent(staff -> {
+            staff.setVoided(true);
+            staffRepository.save(staff);
+        });
     }
 
     @Override
     public boolean existsById(UUID id) {
-        return staffRepository.existsById(id);
+        return staffRepository.findById(id)
+                .map(staff -> staff.getVoided() == null || !staff.getVoided())
+                .orElse(false);
     }
 
     @Override
@@ -90,36 +151,6 @@ public class StaffServiceImpl implements StaffService {
         return prefix + String.format("%03d", nextNumber);
     }
 
-    private StaffDto toDto(Staff staff) {
-        StaffDto dto = new StaffDto();
-        dto.setId(staff.getId());
-        dto.setStaffCode(staff.getStaffCode());
-        dto.setDisplayName(staff.getDisplayName());
-        dto.setBirthDate(staff.getBirthDate());
-        dto.setGender(staff.getGender());
-        dto.setPhoneNumber(staff.getPhoneNumber());
-        dto.setEmail(staff.getEmail());
-        dto.setWorkingStatus(staff.getWorkingStatus());
-        dto.setIdNumber(staff.getIdNumber());
-        dto.setRecruitmentDate(staff.getRecruitmentDate());
-        dto.setStartDate(staff.getStartDate());
-        dto.setCurrentAddress(staff.getCurrentAddress());
-        dto.setSocialInsuranceCode(staff.getSocialInsuranceCode());
-        dto.setLevel(staff.getLevel());
-        
-        if (staff.getDepartment() != null) {
-            dto.setDepartmentId(staff.getDepartment().getId());
-            dto.setDepartmentName(staff.getDepartment().getName());
-        }
-        
-        if (staff.getPosition() != null) {
-            dto.setPositionId(staff.getPosition().getId());
-            dto.setPositionName(staff.getPosition().getName());
-        }
-        
-        return dto;
-    }
-
     private Staff toEntity(StaffDto dto) {
         Staff staff;
         if (dto.getId() != null) {
@@ -152,7 +183,7 @@ public class StaffServiceImpl implements StaffService {
         }
         
         if (dto.getPositionId() != null) {
-            positionTitleRepository.findById(dto.getPositionId()).ifPresent(staff::setPosition);
+            positionRepository.findById(dto.getPositionId()).ifPresent(staff::setPosition);
         }
         
         return staff;
