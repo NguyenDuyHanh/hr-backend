@@ -22,7 +22,7 @@ public class UserController {
     @Autowired
     private UserService userService;
 
-    @GetMapping
+    @GetMapping("/unpaginated")
     public ResponseEntity<ApiResponse<List<UserDto>>> getAllUsersUnpaginated() {
         List<UserDto> result = userService.getAllUsersUnpaginated();
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ danh sách người dùng thành công", result));

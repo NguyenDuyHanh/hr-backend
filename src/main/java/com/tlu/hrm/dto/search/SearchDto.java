@@ -21,4 +21,7 @@ public class SearchDto implements Serializable {
     private String extWhereClause;
     private String orderByDesc;
     private UUID departmentId;
+    private Boolean active;
+    private UUID positionId;
+    private UUID roleId;
 }

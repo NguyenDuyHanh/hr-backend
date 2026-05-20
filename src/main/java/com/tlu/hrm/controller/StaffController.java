@@ -22,6 +22,24 @@ public class StaffController {
     @Autowired
     private StaffService staffService;
 
+    @Autowired
+    private com.tlu.hrm.repository.DepartmentRepository departmentRepository;
+
+    @Autowired
+    private com.tlu.hrm.repository.PositionRepository positionRepository;
+
+    @GetMapping("/departments")
+    public ResponseEntity<ApiResponse<List<com.tlu.hrm.model.Department>>> getAllDepartments() {
+        List<com.tlu.hrm.model.Department> result = departmentRepository.findAll();
+        return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ danh sách phòng ban thành công", result));
+    }
+
+    @GetMapping("/positions")
+    public ResponseEntity<ApiResponse<List<com.tlu.hrm.model.Position>>> getAllPositions() {
+        List<com.tlu.hrm.model.Position> result = positionRepository.findAll();
+        return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ danh sách chức danh thành công", result));
+    }
+
     @GetMapping
     public ResponseEntity<ApiResponse<List<StaffDto>>> getAllStaffsUnpaginated() {
         List<StaffDto> result = staffService.getAllStaffsUnpaginated();
