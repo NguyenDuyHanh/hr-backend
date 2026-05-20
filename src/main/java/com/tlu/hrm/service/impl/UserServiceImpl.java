@@ -3,6 +3,8 @@ package com.tlu.hrm.service.impl;
 import com.tlu.hrm.dto.request.UserDto;
 import com.tlu.hrm.dto.search.SearchDto;
 import com.tlu.hrm.model.User;
+import com.tlu.hrm.model.Role;
+import com.tlu.hrm.model.UserRole;
 import com.tlu.hrm.repository.StaffRepository;
 import com.tlu.hrm.repository.UserRepository;
 import com.tlu.hrm.service.UserService;
@@ -14,6 +16,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -33,10 +36,42 @@ public class UserServiceImpl implements UserService {
         List<User> filteredList = userRepository.findAll().stream()
                 .filter(user -> user.getVoided() == null || !user.getVoided())
                 .filter(user -> {
-                    if (searchDto != null && searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
-                        String keyword = searchDto.getKeyword().toLowerCase();
-                        return (user.getUsername() != null && user.getUsername().toLowerCase().contains(keyword))
-                            || (user.getEmail() != null && user.getEmail().toLowerCase().contains(keyword));
+                    if (searchDto != null) {
+                        // 1. Keyword search (username, email, staff display name, staff code)
+                        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
+                            String keyword = searchDto.getKeyword().toLowerCase();
+                            boolean matches = (user.getUsername() != null && user.getUsername().toLowerCase().contains(keyword))
+                                || (user.getEmail() != null && user.getEmail().toLowerCase().contains(keyword))
+                                || (user.getStaff() != null && (
+                                    (user.getStaff().getDisplayName() != null && user.getStaff().getDisplayName().toLowerCase().contains(keyword))
+                                    || (user.getStaff().getStaffCode() != null && user.getStaff().getStaffCode().toLowerCase().contains(keyword))
+                                ));
+                            if (!matches) return false;
+                        }
+                        // 2. Active status filter
+                        if (searchDto.getActive() != null) {
+                            if (user.getActive() == null || !user.getActive().equals(searchDto.getActive())) {
+                                return false;
+                            }
+                        }
+                        // 3. Department filter (linked via staff)
+                        if (searchDto.getDepartmentId() != null) {
+                            if (user.getStaff() == null || user.getStaff().getDepartment() == null || !user.getStaff().getDepartment().getId().equals(searchDto.getDepartmentId())) {
+                                return false;
+                            }
+                        }
+                        // 4. Position filter (linked via staff)
+                        if (searchDto.getPositionId() != null) {
+                            if (user.getStaff() == null || user.getStaff().getPosition() == null || !user.getStaff().getPosition().getId().equals(searchDto.getPositionId())) {
+                                return false;
+                            }
+                        }
+                        // 5. Role filter
+                        if (searchDto.getRoleId() != null) {
+                            boolean hasRole = user.getUserRoles() != null && user.getUserRoles().stream()
+                                .anyMatch(ur -> ur.getRole() != null && ur.getRole().getId().equals(searchDto.getRoleId()));
+                            if (!hasRole) return false;
+                        }
                     }
                     return true;
                 })
@@ -116,7 +151,19 @@ public class UserServiceImpl implements UserService {
         }
         user.setEmail(dto.getEmail());
         user.setActive(dto.getActive());
-        user.setRoles(dto.getRoles());
+        if (user.getUserRoles() == null) {
+            user.setUserRoles(new HashSet<>());
+        } else {
+            user.getUserRoles().clear();
+        }
+        if (dto.getRoles() != null) {
+            for (Role role : dto.getRoles()) {
+                UserRole userRole = new UserRole();
+                userRole.setUser(user);
+                userRole.setRole(role);
+                user.getUserRoles().add(userRole);
+            }
+        }
         
         if (dto.getStaffId() != null) {
             staffRepository.findById(dto.getStaffId()).ifPresent(user::setStaff);

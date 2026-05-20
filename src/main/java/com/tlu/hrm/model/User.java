@@ -34,13 +34,8 @@ public class User extends BaseModel implements UserDetails {
     @Column(name = "active")
     private Boolean active = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "tbl_user_role",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<Role> roles = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private Set<UserRole> userRoles = new HashSet<>();
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "staff_id")
@@ -48,8 +43,12 @@ public class User extends BaseModel implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+        if (userRoles == null) {
+            return java.util.Collections.emptyList();
+        }
+        return userRoles.stream()
+                .filter(ur -> ur.getRole() != null)
+                .map(ur -> new SimpleGrantedAuthority(ur.getRole().getName()))
                 .collect(Collectors.toList());
     }
 
