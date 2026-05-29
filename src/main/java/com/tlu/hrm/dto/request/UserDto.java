@@ -1,15 +1,16 @@
 package com.tlu.hrm.dto.request;
 
-import com.tlu.hrm.model.Role;
-import com.tlu.hrm.model.User;
-import com.tlu.hrm.model.UserRole;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import com.tlu.hrm.model.Role;
+import com.tlu.hrm.model.User;
+import com.tlu.hrm.model.UserRole;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
 @NoArgsConstructor
@@ -28,7 +29,6 @@ public class UserDto {
         if (entity != null) {
             this.id = entity.getId();
             this.username = entity.getUsername();
-            this.password = entity.getPassword();
             this.email = entity.getEmail();
             this.active = entity.getActive();
             if (entity.getUserRoles() != null) {

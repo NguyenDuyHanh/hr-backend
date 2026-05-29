@@ -31,6 +31,9 @@ public class UserServiceImpl implements UserService {
     @Autowired
     private StaffRepository staffRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Override
     public Page<UserDto> getAllUsers(SearchDto searchDto) {
         List<User> filteredList = userRepository.findAll().stream()
@@ -147,7 +150,10 @@ public class UserServiceImpl implements UserService {
         }
         user.setUsername(dto.getUsername());
         if (dto.getPassword() != null && !dto.getPassword().isEmpty()) {
-            user.setPassword(dto.getPassword());
+            // Encode password only if it is a new user or if password has changed
+            if (user.getId() == null || !dto.getPassword().equals(user.getPassword())) {
+                user.setPassword(passwordEncoder.encode(dto.getPassword()));
+            }
         }
         user.setEmail(dto.getEmail());
         user.setActive(dto.getActive());
