@@ -12,20 +12,15 @@ import org.springframework.security.core.userdetails.UserDetails;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Entity
-@Table(name = "tbl_user_ext")
+@Table(name = "tbl_user")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserExt implements UserDetails {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class User extends BaseModel implements UserDetails {
 
     @Column(name = "username", unique = true, nullable = false)
     private String username;
@@ -39,22 +34,21 @@ public class UserExt implements UserDetails {
     @Column(name = "active")
     private Boolean active = true;
 
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-            name = "tbl_user_role",
-            joinColumns = @JoinColumn(name = "user_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private Set<Role> roles = new HashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    private Set<UserRole> userRoles = new HashSet<>();
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "staff_id")
     private Staff staff;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return roles.stream()
-                .map(role -> new SimpleGrantedAuthority(role.getName()))
+        if (userRoles == null) {
+            return java.util.Collections.emptyList();
+        }
+        return userRoles.stream()
+                .filter(ur -> ur.getRole() != null)
+                .map(ur -> new SimpleGrantedAuthority(ur.getRole().getName()))
                 .collect(Collectors.toList());
     }
 

@@ -15,11 +15,7 @@ import java.time.LocalDate;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Staff {
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private UUID id;
+public class Staff extends BaseModel {
 
     @Column(name = "staff_code", unique = true, nullable = false)
     private String staffCode;
@@ -57,7 +53,7 @@ public class Staff {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "position_id")
-    private PositionTitle position;
+    private Position position;
 
     @Column(name = "current_address")
     private String currentAddress;

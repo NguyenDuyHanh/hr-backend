@@ -1,13 +1,11 @@
 package com.tlu.hrm.repository;
 
-import com.tlu.hrm.model.Role;
+import com.tlu.hrm.model.Position;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.Optional;
 import java.util.UUID;
 
 @Repository
-public interface RoleRepository extends JpaRepository<Role, UUID> {
-    Optional<Role> findByName(String name);
+public interface PositionRepository extends JpaRepository<Position, UUID> {
 }

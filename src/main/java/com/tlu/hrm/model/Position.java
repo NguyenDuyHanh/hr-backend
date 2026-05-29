@@ -7,16 +7,20 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "tbl_role")
+@Table(name = "tbl_position")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-public class Role extends BaseModel {
+public class Position extends BaseModel {
 
-    @Column(name = "name", unique = true, nullable = false)
+    @Column(name = "code", unique = true, nullable = false)
+    private String code;
+
+    @Column(name = "name", nullable = false)
     private String name;
 
     @Column(name = "description")
     private String description;
+
 }
