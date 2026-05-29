@@ -25,11 +25,21 @@ public class DatabaseInitializer implements CommandLineRunner {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
     @Override
     @Transactional
     public void run(String... args) throws Exception {
-        // 1. Seed Roles from CSV
-        Role adminRole = null;
+        seedRoles();
+        seedDefaultAdmin();
+    }
+
+    private void seedRoles() throws Exception {
+        if (roleRepository.count() > 0) {
+            return;
+        }
+
         ClassPathResource resource = new ClassPathResource("setup/roles.csv");
         if (resource.exists()) {
             try (BufferedReader reader = new BufferedReader(
@@ -48,42 +58,42 @@ public class DatabaseInitializer implements CommandLineRunner {
                     if (parts.length >= 2) {
                         String name = parts[0].trim();
                         String description = parts[1].trim();
-                        Role seeded = seedRole(name, description);
-                        if ("ROLE_ADMIN".equals(name)) {
-                            adminRole = seeded;
-                        }
+                        seedRole(name, description);
                     }
                 }
             }
         } else {
             System.err.println("Setup file setup/roles.csv not found!");
             // Fallback seeding just in case
-            adminRole = seedRole("ROLE_ADMIN", "Quản trị viên hệ thống");
+            seedRole("ROLE_ADMIN", "Quản trị viên hệ thống");
             seedRole("HR_MANAGER", "Quản lý nhân sự");
             seedRole("HR_USER", "Nhân viên nhân sự");
         }
+    }
 
-        // 2. Seed default admin user if not exists
-        if (userRepository.findByUsername("admin").isEmpty()) {
-            if (adminRole == null) {
-                adminRole = roleRepository.findByName("ROLE_ADMIN").orElseGet(() -> seedRole("ROLE_ADMIN", "Quản trị viên hệ thống"));
-            }
-            User admin = new User();
-            admin.setUsername("admin");
-            admin.setPassword("admin"); // plain text password as observed in UserServiceImpl
-            admin.setEmail("admin@hrm.com");
-            admin.setActive(true);
-            admin.setVoided(false);
-            admin.setUserRoles(new HashSet<>());
-
-            UserRole userRole = new UserRole();
-            userRole.setUser(admin);
-            userRole.setRole(adminRole);
-            admin.getUserRoles().add(userRole);
-
-            userRepository.save(admin);
-            System.out.println("Default admin user (username: admin, password: admin) created successfully.");
+    private void seedDefaultAdmin() {
+        if (userRepository.count() > 0) {
+            return;
         }
+
+        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
+                .orElseGet(() -> seedRole("ROLE_ADMIN", "Quản trị viên hệ thống"));
+        
+        User admin = new User();
+        admin.setUsername("admin");
+        admin.setPassword(passwordEncoder.encode("admin")); // Encrypted default password
+        admin.setEmail("admin@hrm.com");
+        admin.setActive(true);
+        admin.setVoided(false);
+        admin.setUserRoles(new HashSet<>());
+
+        UserRole userRole = new UserRole();
+        userRole.setUser(admin);
+        userRole.setRole(adminRole);
+        admin.getUserRoles().add(userRole);
+
+        userRepository.save(admin);
+        System.out.println("Default admin user (username: admin, password: admin) created successfully.");
     }
 
     private Role seedRole(String name, String description) {
