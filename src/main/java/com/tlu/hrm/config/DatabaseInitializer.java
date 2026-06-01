@@ -6,6 +6,7 @@ import com.tlu.hrm.model.UserRole;
 import com.tlu.hrm.repository.RoleRepository;
 import com.tlu.hrm.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,15 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
+
+    @Value("${app.admin.username}")
+    private String adminUsername;
+
+    @Value("${app.admin.password}")
+    private String adminPassword;
+
+    @Value("${app.admin.email}")
+    private String adminEmail;
 
     @Override
     @Transactional
@@ -78,11 +88,11 @@ public class DatabaseInitializer implements CommandLineRunner {
 
         Role adminRole = roleRepository.findByName("ROLE_ADMIN")
                 .orElseGet(() -> seedRole("ROLE_ADMIN", "Quản trị viên hệ thống"));
-        
+
         User admin = new User();
-        admin.setUsername("admin");
-        admin.setPassword(passwordEncoder.encode("admin")); // Encrypted default password
-        admin.setEmail("admin@hrm.com");
+        admin.setUsername(adminUsername);
+        admin.setPassword(passwordEncoder.encode(adminPassword)); // Encrypted default password
+        admin.setEmail(adminEmail);
         admin.setActive(true);
         admin.setVoided(false);
         admin.setUserRoles(new HashSet<>());
@@ -93,7 +103,7 @@ public class DatabaseInitializer implements CommandLineRunner {
         admin.getUserRoles().add(userRole);
 
         userRepository.save(admin);
-        System.out.println("Default admin user (username: admin, password: admin) created successfully.");
+        System.out.println("Default admin user (username: " + adminUsername + ") created successfully.");
     }
 
     private Role seedRole(String name, String description) {

@@ -2,9 +2,9 @@ spring:
   application:
     name: hrm
   datasource:
-    url: jdbc:postgresql://localhost:5432/hrm
-    username: postgres
-    password: 123456
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/hrm}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:123456}
   jpa:
     hibernate:
       ddl-auto: update
@@ -23,3 +23,9 @@ groq:
 jwt:
   expiration: 300000          # 5 phút (5 * 60 * 1000 ms)
   refresh-expiration: 86400000  # 1 ngày (24 * 60 * 60 * 1000 ms)
+
+app:
+  admin:
+    username: ${ADMIN_USERNAME:admin}
+    password: ${ADMIN_PASSWORD:Admin@123}
+    email: ${ADMIN_EMAIL:admin@hrm.com}
