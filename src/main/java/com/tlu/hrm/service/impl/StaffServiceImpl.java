@@ -95,8 +95,89 @@ public class StaffServiceImpl implements StaffService {
     }
 
     @Override
-    public StaffDto saveStaff(StaffDto staffDto) {
-        Staff staff = toEntity(staffDto);
+    public StaffDto saveStaff(StaffDto dto) {
+        Staff staff;
+        if (dto.getId() != null) {
+            staff = staffRepository.findById(dto.getId()).orElse(new Staff());
+        } else {
+            staff = new Staff();
+        }
+        
+        staff.setStaffCode(dto.getStaffCode());
+        staff.setDisplayName(dto.getDisplayName());
+        staff.setBirthDate(dto.getBirthDate());
+        staff.setGender(dto.getGender());
+        staff.setPhoneNumber(dto.getPhoneNumber());
+        staff.setEmail(dto.getEmail());
+        staff.setWorkingStatus(dto.getWorkingStatus());
+        staff.setIdNumber(dto.getIdNumber());
+        staff.setRecruitmentDate(dto.getRecruitmentDate());
+        staff.setStartDate(dto.getStartDate());
+        staff.setCurrentAddress(dto.getCurrentAddress());
+        staff.setSocialInsuranceCode(dto.getSocialInsuranceCode());
+        staff.setLevel(dto.getLevel());
+        
+        if (dto.getDepartmentId() != null) {
+            departmentRepository.findById(dto.getDepartmentId()).ifPresent(staff::setDepartment);
+        } else {
+            staff.setDepartment(null);
+        }
+        
+        if (dto.getPositionId() != null) {
+            positionRepository.findById(dto.getPositionId()).ifPresent(staff::setPosition);
+        } else {
+            staff.setPosition(null);
+        }
+
+        // Map expanded fields
+        staff.setImagePath(dto.getImagePath());
+        staff.setMaritalStatus(dto.getMaritalStatus());
+        staff.setBirthPlace(dto.getBirthPlace());
+        staff.setNationalityId(dto.getNationalityId());
+        staff.setEthnicsId(dto.getEthnicsId());
+        staff.setReligionId(dto.getReligionId());
+        staff.setEducationDegreeId(dto.getEducationDegreeId());
+        staff.setProvinceId(dto.getProvinceId());
+        staff.setAdministrativeunitId(dto.getAdministrativeunitId());
+        staff.setPermanentResidence(dto.getPermanentResidence());
+        staff.setCurrentResidence(dto.getCurrentResidence());
+        staff.setHomeTown(dto.getHomeTown());
+        staff.setIdNumberIssueDate(dto.getIdNumberIssueDate());
+        staff.setIdNumberIssueBy(dto.getIdNumberIssueBy());
+        staff.setPersonalIdentificationNumber(dto.getPersonalIdentificationNumber());
+        staff.setPersonalIdentificationIssueDate(dto.getPersonalIdentificationIssueDate());
+        staff.setPersonalIdentificationIssuePlace(dto.getPersonalIdentificationIssuePlace());
+        staff.setPassportNumber(dto.getPassportNumber());
+        staff.setWorkPermitNumber(dto.getWorkPermitNumber());
+        staff.setStatusId(dto.getStatusId());
+        staff.setStaffWorkingFormat(dto.getStaffWorkingFormat());
+        staff.setIntroducerId(dto.getIntroducerId());
+        staff.setRecruiterId(dto.getRecruiterId());
+        staff.setApprenticeDays(dto.getApprenticeDays());
+        staff.setCompanyEmail(dto.getCompanyEmail());
+        staff.setStaffPhase(dto.getStaffPhase());
+        staff.setStaffPositionType(dto.getStaffPositionType());
+        staff.setHealthCareRegistrationPlaceId(dto.getHealthCareRegistrationPlaceId());
+        staff.setStaffWorkShiftType(dto.getStaffWorkShiftType());
+        staff.setFixShiftWorkId(dto.getFixShiftWorkId());
+        staff.setStaffLeaveShiftType(dto.getStaffLeaveShiftType());
+        staff.setFixLeaveWeekDay(dto.getFixLeaveWeekDay());
+        staff.setFixLeaveWeekDay2(dto.getFixLeaveWeekDay2());
+        staff.setSkipTimekeeping(dto.getSkipTimekeeping());
+        staff.setSkipLateEarlyCount(dto.getSkipLateEarlyCount());
+        staff.setSkipOvertimeCount(dto.getSkipOvertimeCount());
+        staff.setOnBlacklist(dto.getOnBlacklist());
+        staff.setHasSocialIns(dto.getHasSocialIns());
+        staff.setUnemploymentDeclaration(dto.getUnemploymentDeclaration());
+        staff.setAllowExternalIpTimekeeping(dto.getAllowExternalIpTimekeeping());
+        staff.setOrganizationId(dto.getOrganizationId());
+        staff.setPositionTitleId(dto.getPositionTitleId());
+        staff.setContactPersonInfo(dto.getContactPersonInfo());
+        staff.setTaxCode(dto.getTaxCode());
+        staff.setSocialInsuranceNumber(dto.getSocialInsuranceNumber());
+        staff.setHealthInsuranceNumber(dto.getHealthInsuranceNumber());
+        staff.setSocialInsuranceNote(dto.getSocialInsuranceNote());
+
         Staff savedStaff = staffRepository.save(staff);
         return new StaffDto(savedStaff);
     }
@@ -149,43 +230,5 @@ public class StaffServiceImpl implements StaffService {
 
         // 4. Kết hợp tiền tố hiện tại với số thứ tự mới (Ví dụ: NV2605_005)
         return prefix + String.format("%03d", nextNumber);
-    }
-
-    private Staff toEntity(StaffDto dto) {
-        Staff staff;
-        if (dto.getId() != null) {
-            staff = staffRepository.findById(dto.getId()).orElse(new Staff());
-        } else {
-            staff = new Staff();
-        }
-        
-        staff.setStaffCode(dto.getStaffCode());
-        staff.setDisplayName(dto.getDisplayName());
-        
-        staff.setBirthDate(dto.getBirthDate());
-        
-        staff.setGender(dto.getGender());
-        staff.setPhoneNumber(dto.getPhoneNumber());
-        staff.setEmail(dto.getEmail());
-        staff.setWorkingStatus(dto.getWorkingStatus());
-        staff.setIdNumber(dto.getIdNumber());
-        
-        staff.setRecruitmentDate(dto.getRecruitmentDate());
-        
-        staff.setStartDate(dto.getStartDate());
-        
-        staff.setCurrentAddress(dto.getCurrentAddress());
-        staff.setSocialInsuranceCode(dto.getSocialInsuranceCode());
-        staff.setLevel(dto.getLevel());
-        
-        if (dto.getDepartmentId() != null) {
-            departmentRepository.findById(dto.getDepartmentId()).ifPresent(staff::setDepartment);
-        }
-        
-        if (dto.getPositionId() != null) {
-            positionRepository.findById(dto.getPositionId()).ifPresent(staff::setPosition);
-        }
-        
-        return staff;
     }
 }
