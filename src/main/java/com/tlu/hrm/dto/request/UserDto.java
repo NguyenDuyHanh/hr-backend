@@ -24,6 +24,8 @@ public class UserDto {
     private Set<Role> roles;
     private UUID staffId;
     private String staffName;
+    private String staffCode;
+    private String imagePath;
 
     public UserDto(User entity) {
         if (entity != null) {
@@ -37,6 +39,8 @@ public class UserDto {
             if (entity.getStaff() != null) {
                 this.staffId = entity.getStaff().getId();
                 this.staffName = entity.getStaff().getDisplayName();
+                this.staffCode = entity.getStaff().getStaffCode();
+                this.imagePath = entity.getStaff().getImagePath();
             }
         }
     }
