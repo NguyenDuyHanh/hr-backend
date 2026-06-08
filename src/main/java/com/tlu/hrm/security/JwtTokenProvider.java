@@ -6,6 +6,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.tlu.hrm.enums.RoleType;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -52,7 +53,7 @@ public class JwtTokenProvider {
         String role = userPrincipal.getAuthorities().stream()
                 .map(auth -> auth.getAuthority())
                 .findFirst()
-                .orElse("ROLE_EMPLOYEE");
+                .orElse(RoleType.HR_EMPLOYEE.getName());
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", role);
