@@ -1,5 +1,6 @@
 package com.tlu.hrm.config;
 
+import com.tlu.hrm.enums.RoleType;
 import com.tlu.hrm.model.Role;
 import com.tlu.hrm.model.User;
 import com.tlu.hrm.model.UserRole;
@@ -75,9 +76,9 @@ public class DatabaseInitializer implements CommandLineRunner {
         } else {
             System.err.println("Setup file setup/roles.csv not found!");
             // Fallback seeding just in case
-            seedRole("ROLE_ADMIN", "Quản trị viên hệ thống");
-            seedRole("HR_MANAGER", "Quản lý nhân sự");
-            seedRole("HR_USER", "Nhân viên nhân sự");
+            seedRole(RoleType.ROLE_ADMIN.getName(), RoleType.ROLE_ADMIN.getDescription());
+            seedRole(RoleType.HR_MANAGER.getName(), RoleType.HR_MANAGER.getDescription());
+            seedRole(RoleType.HR_EMPLOYEE.getName(), RoleType.HR_EMPLOYEE.getDescription());
         }
     }
 
@@ -86,8 +87,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             return;
         }
 
-        Role adminRole = roleRepository.findByName("ROLE_ADMIN")
-                .orElseGet(() -> seedRole("ROLE_ADMIN", "Quản trị viên hệ thống"));
+        Role adminRole = roleRepository.findByName(RoleType.ROLE_ADMIN.getName())
+                .orElseGet(() -> seedRole(RoleType.ROLE_ADMIN.getName(), RoleType.ROLE_ADMIN.getDescription()));
 
         User admin = new User();
         admin.setUsername(adminUsername);
