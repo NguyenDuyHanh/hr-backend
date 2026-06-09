@@ -2,6 +2,7 @@ package com.tlu.hrm.controller;
 
 import com.tlu.hrm.dto.request.ProjectCreateRequest;
 import com.tlu.hrm.dto.request.ProjectStaffRequest;
+import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.response.ApiResponse;
 import com.tlu.hrm.dto.response.ProjectResponse;
 import com.tlu.hrm.dto.response.ProjectStaffDto;
@@ -79,6 +80,12 @@ public class ProjectController {
     public ResponseEntity<ApiResponse<Void>> unfinishProject(@PathVariable UUID id) {
         projectService.unfinishProject(id);
         return ResponseEntity.ok(ApiResponse.success("Bỏ đánh dấu hoàn thành dự án thành công", null));
+    }
+
+    @GetMapping("/{id}/staffs")
+    public ResponseEntity<ApiResponse<List<StaffDto>>> getProjectStaffs(@PathVariable UUID id) {
+        List<StaffDto> result = projectService.getProjectStaffs(id);
+        return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành viên dự án thành công", result));
     }
 
 }

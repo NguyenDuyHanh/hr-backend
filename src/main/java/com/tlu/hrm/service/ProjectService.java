@@ -1,6 +1,7 @@
 package com.tlu.hrm.service;
 
 import com.tlu.hrm.dto.request.ProjectCreateRequest;
+import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.response.ProjectResponse;
 import com.tlu.hrm.dto.search.ProjectSearchRequest;
 import org.springframework.data.domain.Page;
@@ -22,4 +23,5 @@ public interface ProjectService {
 
     void unfinishProject(UUID id);
 
+    List<StaffDto> getProjectStaffs(UUID projectId);
 }
