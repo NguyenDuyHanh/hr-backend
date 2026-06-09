@@ -2,6 +2,7 @@ package com.tlu.hrm.service.impl;
 
 import com.tlu.hrm.dto.request.ProjectCreateRequest;
 import com.tlu.hrm.dto.request.ProjectStaffRequest;
+import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.response.ProjectResponse;
 import com.tlu.hrm.dto.search.ProjectSearchRequest;
 import com.tlu.hrm.exception.ResourceNotFoundException;
@@ -266,6 +267,50 @@ public class ProjectServiceImpl implements ProjectService {
         project.setIsFinished(false);
         project.setEndDate(null);
         projectRepository.save(project);
+    }
+
+    @Override
+    public List<StaffDto> getProjectStaffs(UUID projectId) {
+        Project project = projectRepository.findById(projectId)
+                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + projectId));
+
+        User currentUser = securityUtils.getCurrentUser();
+        if (currentUser == null) {
+            return new ArrayList<>();
+        }
+
+        boolean isSystemManager = securityUtils.isManagerOrAdmin(currentUser);
+        Staff currentStaff = currentUser.getStaff();
+
+        boolean isProjectManager = false;
+        if (currentStaff != null) {
+            isProjectManager = project.getProjectStaffs().stream()
+                    .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                    .anyMatch(ps -> ps.getStaff() != null 
+                            && ps.getStaff().getId().equals(currentStaff.getId()) 
+                            && ps.getProjectRole() == ProjectRole.MANAGER);
+        }
+
+        if (isSystemManager || isProjectManager) {
+            return project.getProjectStaffs().stream()
+                    .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                    .map(ps -> ps.getStaff() != null ? new StaffDto(ps.getStaff()) : null)
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+        } else {
+            List<StaffDto> staffs = new ArrayList<>();
+            if (currentStaff != null) {
+                boolean isMemberOfProject = project.getProjectStaffs().stream()
+                        .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                        .anyMatch(ps -> ps.getStaff() != null 
+                                && ps.getStaff().getId().equals(currentStaff.getId()));
+                if (isMemberOfProject) {
+                    staffs.add(new StaffDto(currentStaff));
+                }
+            }
+            return staffs;
+        }
     }
 
 }
