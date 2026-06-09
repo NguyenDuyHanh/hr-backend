@@ -14,6 +14,7 @@ import com.tlu.hrm.service.TaskService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,39 +40,51 @@ public class TaskController {
     private TaskAttachmentRepository taskAttachmentRepository;
 
     @PostMapping("/paging")
-    public ResponseEntity<ApiResponse<Page<TaskResponse>>> searchTasks(@RequestBody(required = false) TaskSearchRequest request) {
-        if (request == null) request = new TaskSearchRequest();
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccess(#request?.projectId)")
+    public ResponseEntity<ApiResponse<Page<TaskResponse>>> searchTasks(
+            @RequestBody(required = false) TaskSearchRequest request) {
         Page<TaskResponse> result = taskService.searchTasks(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách công việc thành công", result));
     }
 
     @PostMapping("/kanban")
-    public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksForKanban(@RequestBody(required = false) TaskSearchRequest request) {
-        if (request == null) request = new TaskSearchRequest();
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccess(#request?.projectId)")
+    public ResponseEntity<ApiResponse<List<TaskResponse>>> getTasksForKanban(
+            @RequestBody(required = false) TaskSearchRequest request) {
         List<TaskResponse> result = taskService.getTasksForKanban(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách Kanban thành công", result));
     }
 
     @PostMapping("/my-tasks")
-    public ResponseEntity<ApiResponse<Page<TaskResponse>>> getMyTasks(@RequestBody(required = false) TaskSearchRequest request) {
-        if (request == null) request = new TaskSearchRequest();
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccess(#projectId)")
+    public ResponseEntity<ApiResponse<Page<TaskResponse>>> getMyTasks(
+            @RequestBody(required = false) TaskSearchRequest request) {
         Page<TaskResponse> result = taskService.getMyTasks(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách công việc của tôi thành công", result));
     }
 
-    @GetMapping("/project/{projectId}/count-by-status")
-    public ResponseEntity<ApiResponse<java.util.Map<UUID, Long>>> countTasksByStatus(@PathVariable UUID projectId) {
-        java.util.Map<UUID, Long> result = taskService.countTasksByStatus(projectId);
+    @PostMapping("/project/{projectId}/count-by-status")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccess(#projectId)")
+    public ResponseEntity<ApiResponse<java.util.Map<UUID, Long>>> countTasksByStatus(
+            @PathVariable UUID projectId,
+            @RequestBody(required = false) TaskSearchRequest request) {
+        if (request == null) {
+            request = new TaskSearchRequest();
+        }
+        request.setProjectId(projectId);
+        java.util.Map<UUID, Long> result = taskService.countTasksByStatus(request);
         return ResponseEntity.ok(ApiResponse.success("Đếm số lượng công việc theo trạng thái thành công", result));
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccessByTaskId(#id)")
     public ResponseEntity<ApiResponse<TaskResponse>> getTaskById(@PathVariable UUID id) {
         TaskResponse result = taskService.getTaskById(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết công việc thành công", result));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#request?.projectId)")
     public ResponseEntity<ApiResponse<TaskResponse>> createTask(@RequestBody TaskRequest request) {
         request.setId(null);
         TaskResponse result = taskService.saveTask(request);
@@ -79,19 +92,23 @@ public class TaskController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<TaskResponse>> updateTask(@PathVariable UUID id, @RequestBody TaskRequest request) {
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#request?.projectId)")
+    public ResponseEntity<ApiResponse<TaskResponse>> updateTask(@PathVariable UUID id,
+            @RequestBody TaskRequest request) {
         request.setId(id);
         TaskResponse result = taskService.saveTask(request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật công việc thành công", result));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccessByTaskId(#id)")
     public ResponseEntity<ApiResponse<Void>> deleteTask(@PathVariable UUID id) {
         taskService.deleteTask(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa công việc thành công", null));
     }
 
     @PutMapping("/{id}/status")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccessByTaskId(#id)")
     public ResponseEntity<ApiResponse<TaskResponse>> updateTaskStatus(
             @PathVariable UUID id,
             @RequestParam UUID statusId) {
@@ -100,6 +117,7 @@ public class TaskController {
     }
 
     @PostMapping("/{id}/attachments")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccessByTaskId(#id)")
     public ResponseEntity<ApiResponse<TaskAttachmentResponse>> uploadAttachment(
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) throws IOException {
@@ -119,7 +137,7 @@ public class TaskController {
         if (originalFilename != null && originalFilename.contains(".")) {
             extension = originalFilename.substring(originalFilename.lastIndexOf("."));
         }
-        
+
         String savedFilename = UUID.randomUUID().toString() + extension;
         String filePath = uploadDir + savedFilename;
         Files.copy(file.getInputStream(), Paths.get(filePath));
@@ -132,10 +150,12 @@ public class TaskController {
         attachment.setVoided(false);
 
         TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
-        return ResponseEntity.ok(ApiResponse.success("Tải tập tin lên thành công", new TaskAttachmentResponse(savedAttachment)));
+        return ResponseEntity
+                .ok(ApiResponse.success("Tải tập tin lên thành công", new TaskAttachmentResponse(savedAttachment)));
     }
 
     @PostMapping("/{id}/attachments/link")
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccessByTaskId(#id)")
     public ResponseEntity<ApiResponse<TaskAttachmentResponse>> addAttachmentLink(
             @PathVariable UUID id,
             @RequestParam("name") String name,
@@ -153,15 +173,8 @@ public class TaskController {
         attachment.setVoided(false);
 
         TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
-        return ResponseEntity.ok(ApiResponse.success("Lưu tập tin đính kèm thành công", new TaskAttachmentResponse(savedAttachment)));
-    }
-
-    @DeleteMapping("/attachments/{attachmentId}")
-    public ResponseEntity<ApiResponse<Void>> deleteAttachment(@PathVariable UUID attachmentId) {
-        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tập tin đính kèm với ID: " + attachmentId));
-        attachment.setVoided(true);
-        taskAttachmentRepository.save(attachment);
-        return ResponseEntity.ok(ApiResponse.success("Xóa tập tin đính kèm thành công", null));
+        ApiResponse<TaskAttachmentResponse> response = ApiResponse.success("Lưu tập tin đính kèm thành công",
+                new TaskAttachmentResponse(savedAttachment));
+        return ResponseEntity.ok(response);
     }
 }

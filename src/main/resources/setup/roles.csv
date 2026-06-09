@@ -2,7 +2,6 @@ name,description
 ROLE_ADMIN,Quản trị viên hệ thống
 HR_MANAGER,Quản lý nhân sự
 HR_EMPLOYEE,Nhân viên
-HR_STAFF_VIEW,Xem thông tin nhân viên
 HR_RECRUITMENT,Quản lý tuyển dụng
 HR_COMPENSATION_BENEFIT,Quản lý lương và chế độ đãi ngộ
 HR_TIMEKEEPING_MANAGER,Quản lý chấm công
