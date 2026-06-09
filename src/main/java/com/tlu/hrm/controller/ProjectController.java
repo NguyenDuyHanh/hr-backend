@@ -28,7 +28,8 @@ public class ProjectController {
     private ProjectService projectService;
 
     @PostMapping("/paging")
-    public ResponseEntity<ApiResponse<Page<ProjectResponse>>> getAllProjects(@RequestBody(required = false) ProjectSearchRequest request) {
+    public ResponseEntity<ApiResponse<Page<ProjectResponse>>> getAllProjects(
+            @RequestBody(required = false) ProjectSearchRequest request) {
         Page<ProjectResponse> result = projectService.getAllProjects(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dự án thành công", result));
     }
@@ -54,35 +55,40 @@ public class ProjectController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "') or @projectUtils.hasProjectManagerAccess(#id)")
-    public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(@PathVariable UUID id, @RequestBody ProjectCreateRequest request) {
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER
+            + "') or @projectUtils.hasProjectManagerAccess(#id)")
+    public ResponseEntity<ApiResponse<ProjectResponse>> updateProject(@PathVariable UUID id,
+            @RequestBody ProjectCreateRequest request) {
         request.setId(id);
         ProjectResponse result = projectService.saveProject(request);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật dự án thành công", result));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "') or @projectUtils.hasProjectManagerAccess(#id)")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER
+            + "') or @projectUtils.hasProjectManagerAccess(#id)")
     public ResponseEntity<ApiResponse<Void>> deleteProject(@PathVariable UUID id) {
         projectService.deleteProject(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa dự án thành công", null));
     }
 
     @PutMapping("/{id}/finish")
-    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "') or @projectUtils.hasProjectManagerAccess(#id)")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER
+            + "') or @projectUtils.hasProjectManagerAccess(#id)")
     public ResponseEntity<ApiResponse<Void>> finishProject(@PathVariable UUID id) {
         projectService.finishProject(id);
         return ResponseEntity.ok(ApiResponse.success("Hoàn thành dự án thành công", null));
     }
 
     @PutMapping("/{id}/unfinish")
-    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "') or @projectUtils.hasProjectManagerAccess(#id)")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER
+            + "') or @projectUtils.hasProjectManagerAccess(#id)")
     public ResponseEntity<ApiResponse<Void>> unfinishProject(@PathVariable UUID id) {
         projectService.unfinishProject(id);
         return ResponseEntity.ok(ApiResponse.success("Bỏ đánh dấu hoàn thành dự án thành công", null));
     }
 
-    @GetMapping("/{id}/staffs")
+    @GetMapping("/{id}/get-staffs")
     public ResponseEntity<ApiResponse<List<StaffDto>>> getProjectStaffs(@PathVariable UUID id) {
         List<StaffDto> result = projectService.getProjectStaffs(id);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách thành viên dự án thành công", result));

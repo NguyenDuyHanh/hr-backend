@@ -16,5 +16,5 @@ public interface TaskService {
     void deleteTask(UUID id);
     TaskResponse updateTaskStatus(UUID taskId, UUID statusId);
     Page<TaskResponse> getMyTasks(TaskSearchRequest request);
-    java.util.Map<UUID, Long> countTasksByStatus(UUID projectId);
+    java.util.Map<UUID, Long> countTasksByStatus(TaskSearchRequest request);
 }

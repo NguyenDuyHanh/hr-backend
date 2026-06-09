@@ -46,6 +46,9 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskResponse> searchTasks(TaskSearchRequest request) {
+        if (request == null) {
+            return null;
+        }
         List<Task> filteredList = getFilteredTasksList(request);
 
         int total = filteredList.size();
@@ -64,8 +67,6 @@ public class TaskServiceImpl implements TaskService {
 
         return new PageImpl<>(pageContent, PageRequest.of(pageNum, size), total);
     }
-
-
 
     @Override
     public TaskResponse getTaskById(UUID id) {
@@ -212,17 +213,23 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public Page<TaskResponse> getMyTasks(TaskSearchRequest request) {
+        if (request == null) {
+            return null;
+        }
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null || currentUser.getStaff() == null) {
-            return new PageImpl<>(new ArrayList<>(), PageRequest.of(0, 10), 0);
+            return null;
         }
         request.setAssigneeId(currentUser.getStaff().getId());
         return searchTasks(request);
     }
 
     @Override
-    public Map<UUID, Long> countTasksByStatus(UUID projectId) {
-        List<Task> tasks = taskRepository.findByProjectIdAndVoidedFalse(projectId);
+    public Map<UUID, Long> countTasksByStatus(TaskSearchRequest request) {
+        if (request == null || request.getProjectId() == null) {
+            return null;
+        }
+        UUID projectId = request.getProjectId();
         Map<UUID, Long> countMap = new HashMap<>();
 
         // Khởi tạo các status của dự án với count = 0
@@ -231,11 +238,27 @@ public class TaskServiceImpl implements TaskService {
             countMap.put(status.getId(), 0L);
         }
 
+        // Tạo request clone để loại bỏ filter statusIds khi đếm (để đếm được tất cả
+        // trạng thái)
+        TaskSearchRequest countRequest = new TaskSearchRequest();
+        countRequest.setProjectId(projectId);
+        countRequest.setAssigneeId(request.getAssigneeId());
+        countRequest.setFollowerId(request.getFollowerId());
+        countRequest.setActivityIds(request.getActivityIds());
+        countRequest.setPriorities(request.getPriorities());
+        countRequest.setStartCreatedDate(request.getStartCreatedDate());
+        countRequest.setEndCreatedDate(request.getEndCreatedDate());
+        countRequest.setKeyword(request.getKeyword());
+
+        List<Task> filteredTasks = getFilteredTasksList(countRequest);
+
         // Đếm các task
-        for (Task task : tasks) {
+        for (Task task : filteredTasks) {
             if (task.getStatus() != null) {
                 UUID statusId = task.getStatus().getId();
-                countMap.put(statusId, countMap.getOrDefault(statusId, 0L) + 1L);
+                if (countMap.containsKey(statusId)) {
+                    countMap.put(statusId, countMap.get(statusId) + 1L);
+                }
             }
         }
 
@@ -257,10 +280,31 @@ public class TaskServiceImpl implements TaskService {
                         Project project = t.getProject();
                         if (project == null)
                             return false;
-                        return project.getProjectStaffs().stream()
+
+                        // Check xem user có thuộc dự án không
+                        boolean isMemberOfProject = project.getProjectStaffs().stream()
                                 .filter(ps -> ps.getVoided() == null || !ps.getVoided())
                                 .anyMatch(ps -> ps.getStaff() != null
                                         && ps.getStaff().getId().equals(currentStaff.getId()));
+                        if (!isMemberOfProject) {
+                            return false;
+                        }
+
+                        // Check xem user có phải Project Manager của dự án này không
+                        boolean isProjectManager = project.getProjectStaffs().stream()
+                                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                .anyMatch(ps -> ps.getStaff() != null
+                                        && ps.getStaff().getId().equals(currentStaff.getId())
+                                        && com.tlu.hrm.enums.ProjectRole.MANAGER.equals(ps.getProjectRole()));
+
+                        // Nếu không phải Project Manager, chỉ được xem task của chính mình (assignee hoặc follower)
+                        if (!isProjectManager) {
+                            boolean isAssignee = t.getAssignee() != null
+                                    && t.getAssignee().getId().equals(currentStaff.getId());
+                            boolean isFollower = t.getStaffs() != null && t.getStaffs().stream()
+                                    .anyMatch(s -> s.getId().equals(currentStaff.getId()));
+                            return isAssignee || isFollower;
+                        }
                     }
                     return true;
                 })
@@ -343,13 +387,14 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<TaskResponse> getTasksForKanban(TaskSearchRequest request) {
-        UUID projectId = request.getProjectId();
-        if (projectId == null) {
-            return new ArrayList<>();
+        if (request == null || request.getProjectId() == null) {
+            return null;
         }
+        UUID projectId = request.getProjectId();
 
-        List<ProjectWorkingStatus> statuses = projectWorkingStatusRepository.findByProjectIdOrderByDisplayOrderAsc(projectId);
-        
+        List<ProjectWorkingStatus> statuses = projectWorkingStatusRepository
+                .findByProjectIdOrderByDisplayOrderAsc(projectId);
+
         List<TaskResponse> allTasks = new ArrayList<>();
 
         for (ProjectWorkingStatus status : statuses) {
@@ -361,10 +406,10 @@ public class TaskServiceImpl implements TaskService {
             statusRequest.setPriorities(request.getPriorities());
             statusRequest.setKeyword(request.getKeyword());
             statusRequest.setStatusIds(Collections.singletonList(status.getId()));
-            
+
             statusRequest.setPageIndex(1);
             statusRequest.setPageSize(request.getPageSize() > 0 ? request.getPageSize() : 10);
-            
+
             Page<TaskResponse> page = searchTasks(statusRequest);
             if (page.getContent() != null && !page.getContent().isEmpty()) {
                 allTasks.addAll(page.getContent());
