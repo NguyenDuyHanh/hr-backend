@@ -23,4 +23,7 @@ public class Position extends BaseModel {
     @Column(name = "description")
     private String description;
 
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "department_id")
+    private Department department;
 }
