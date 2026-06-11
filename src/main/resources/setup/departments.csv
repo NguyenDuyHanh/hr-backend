@@ -1,0 +1,8 @@
+code,name,description
+PB01,Phòng Nhân sự,Quản lý nhân sự, tuyển dụng và C&B
+PB02,Phòng Phát triển Phần mềm,Phát triển và bảo trì các hệ thống phần mềm
+PB03,Phòng Kinh doanh & Marketing,Phát triển thị trường, bán hàng và truyền thông quảng bá
+PB04,Phòng Kế toán,Quản lý tài chính, thu chi và báo cáo thuế
+PB06,Ban Giám đốc,Ban điều hành và định hướng chiến lược công ty
+PB07,Phòng Đảm bảo Chất lượng,Kiểm thử phần mềm và đảm bảo chất lượng sản phẩm QA/QC
+PB08,Phòng Hệ thống & DevOps,Vận hành hệ thống, đám mây Cloud và hỗ trợ kỹ thuật IT Helpdesk

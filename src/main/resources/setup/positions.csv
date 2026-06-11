@@ -1,0 +1,21 @@
+code,name,description,department_code
+VT01,Trưởng phòng Nhân sự,Quản lý chung hoạt động phòng nhân sự,PB01
+VT02,Chuyên viên Tuyển dụng,Tìm kiếm và tuyển dụng nhân sự,PB01
+VT03,Chuyên viên Lương & Phúc lợi (C&B),Tính lương bảo hiểm và chế độ đãi ngộ,PB01
+VT04,Trưởng phòng Phát triển,Quản lý đội ngũ phát triển và dự án phần mềm,PB02
+VT05,Kỹ sư Phần mềm (Backend),Lập trình backend API và cơ sở dữ liệu,PB02
+VT06,Kỹ sư Phần mềm (Frontend),Lập trình frontend giao diện người dùng,PB02
+VT07,Kỹ sư cầu nối (BrSE),Kết nối trao đổi giữa khách hàng và team dev,PB02
+VT08,Trưởng phòng Kinh doanh,Quản lý và thúc đẩy hoạt động bán hàng,PB03
+VT09,Nhân viên Phát triển thị trường,Tìm kiếm khách hàng và phát triển thị trường mới,PB03
+VT10,Chuyên viên Marketing & SEO,Lên kế hoạch chạy chiến dịch truyền thông quảng bá,PB03
+VT11,Kế toán trưởng,Quản lý tài chính thuế và lập báo cáo tài chính,PB04
+VT12,Nhân viên Kế toán,Xử lý thu chi ngân quỹ và sổ sách kế toán,PB04
+VT13,Giám đốc điều hành (CEO),Quản lý điều hành toàn bộ công ty,PB06
+VT14,Giám đốc công nghệ (CTO),Định hướng công nghệ kỹ thuật toàn công ty,PB06
+VT15,Giám đốc tài chính (CFO),Quản lý tài chính chiến lược toàn công ty,PB06
+VT16,Trưởng nhóm QA/QC,Quản lý quy trình kiểm thử và chất lượng sản phẩm,PB07
+VT17,Kỹ sư Kiểm thử (Manual Tester),Thực hiện kiểm thử thủ công và viết kịch bản test,PB07
+VT18,Kỹ sư Kiểm thử (Automation),Viết script kiểm thử tự động hệ thống,PB07
+VT19,Kỹ sư DevOps,Quản lý vận hành hệ thống đám mây CI/CD,PB08
+VT20,Nhân viên IT Helpdesk,Hỗ trợ kỹ thuật phần cứng và phần mềm nội bộ,PB08

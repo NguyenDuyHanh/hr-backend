@@ -4,8 +4,12 @@ import com.tlu.hrm.enums.RoleType;
 import com.tlu.hrm.model.Role;
 import com.tlu.hrm.model.User;
 import com.tlu.hrm.model.UserRole;
+import com.tlu.hrm.model.Department;
+import com.tlu.hrm.model.Position;
 import com.tlu.hrm.repository.RoleRepository;
 import com.tlu.hrm.repository.UserRepository;
+import com.tlu.hrm.repository.DepartmentRepository;
+import com.tlu.hrm.repository.PositionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -17,6 +21,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
+import java.util.Optional;
 
 @Component
 public class DatabaseInitializer implements CommandLineRunner {
@@ -26,6 +31,12 @@ public class DatabaseInitializer implements CommandLineRunner {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private PositionRepository positionRepository;
 
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
@@ -44,6 +55,8 @@ public class DatabaseInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         seedRoles();
         seedDefaultAdmin();
+        seedDepartments();
+        seedPositions();
     }
 
     private void seedRoles() throws Exception {
@@ -117,5 +130,87 @@ public class DatabaseInitializer implements CommandLineRunner {
             System.out.println("Role " + name + " seeded successfully.");
             return saved;
         });
+    }
+
+    private void seedDepartments() throws Exception {
+        ClassPathResource resource = new ClassPathResource("setup/departments.csv");
+        if (resource.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) {
+                        isHeader = false;
+                        continue;
+                    }
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    String[] parts = line.split(",", 3);
+                    if (parts.length >= 2) {
+                        String code = parts[0].trim();
+                        String name = parts[1].trim();
+                        String description = parts.length >= 3 ? parts[2].trim() : "";
+                        
+                        Department dept = departmentRepository.findByCode(code)
+                                .orElseGet(() -> {
+                                    Department newDept = new Department();
+                                    newDept.setCode(code);
+                                    return newDept;
+                                });
+                        dept.setName(name);
+                        dept.setDescription(description);
+                        dept.setVoided(false);
+                        departmentRepository.save(dept);
+                        System.out.println("Department " + name + " (" + code + ") seeded successfully.");
+                    }
+                }
+            }
+        }
+    }
+
+    private void seedPositions() throws Exception {
+        ClassPathResource resource = new ClassPathResource("setup/positions.csv");
+        if (resource.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) {
+                        isHeader = false;
+                        continue;
+                    }
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    String[] parts = line.split(",", 4);
+                    if (parts.length >= 2) {
+                        String code = parts[0].trim();
+                        String name = parts[1].trim();
+                        String description = parts.length >= 3 ? parts[2].trim() : "";
+                        String deptCode = parts.length >= 4 ? parts[3].trim() : "";
+                        
+                        Position pos = positionRepository.findByCode(code)
+                                .orElseGet(() -> {
+                                    Position newPos = new Position();
+                                    newPos.setCode(code);
+                                    return newPos;
+                                });
+                        pos.setName(name);
+                        pos.setDescription(description);
+                        pos.setVoided(false);
+                        
+                        if (!deptCode.isEmpty()) {
+                            departmentRepository.findByCode(deptCode).ifPresent(pos::setDepartment);
+                        }
+                        
+                        positionRepository.save(pos);
+                        System.out.println("Position " + name + " (" + code + ") seeded successfully.");
+                    }
+                }
+            }
+        }
     }
 }
