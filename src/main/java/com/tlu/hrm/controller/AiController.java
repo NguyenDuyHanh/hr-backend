@@ -56,7 +56,7 @@ public class AiController {
                 // 1. Build a clean, token-efficient system prompt instructing AI on tool usage
                 String systemPrompt = buildSystemPrompt();
 
-                // 2. Define the tools array metadata for getStaffProfile and getEmployeeCount
+                // 2. Define the tools array metadata for getStaffProfile, getEmployeeCount, getAllStaff and getAllDepartments
                 String toolsJson = """
                 [
                   {
@@ -81,6 +81,28 @@ public class AiController {
                     "function": {
                       "name": "getEmployeeCount",
                       "description": "Lấy tổng số lượng nhân viên/nhân sự hiện có trong toàn hệ thống quản lý.",
+                      "parameters": {
+                        "type": "object",
+                        "properties": {}
+                      }
+                    }
+                  },
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "getAllStaff",
+                      "description": "Lấy danh sách tất cả nhân viên trong hệ thống (bao gồm mã nhân viên, họ tên, phòng ban, chức danh, email, trạng thái).",
+                      "parameters": {
+                        "type": "object",
+                        "properties": {}
+                      }
+                    }
+                  },
+                  {
+                    "type": "function",
+                    "function": {
+                      "name": "getAllDepartments",
+                      "description": "Lấy danh sách toàn bộ các phòng ban hiện có trong hệ thống (bao gồm mã phòng ban, tên phòng ban, mô tả).",
                       "parameters": {
                         "type": "object",
                         "properties": {}
@@ -164,6 +186,12 @@ public class AiController {
                             } else if ("getEmployeeCount".equals(funcName)) {
                                 System.out.println("-> Executing local method: getEmployeeCount()");
                                 toolResult = executeGetEmployeeCount();
+                            } else if ("getAllStaff".equals(funcName)) {
+                                System.out.println("-> Executing local method: getAllStaff()");
+                                toolResult = executeGetAllStaff();
+                            } else if ("getAllDepartments".equals(funcName)) {
+                                System.out.println("-> Executing local method: getAllDepartments()");
+                                toolResult = executeGetAllDepartments();
                             }
                             System.out.println("-> Result Returned to AI: " + toolResult);
                             System.out.println("--------------------------------\n");
@@ -358,6 +386,47 @@ public class AiController {
         return "{\"status\": \"success\", \"totalEmployees\": " + count + "}";
     }
 
+    private String executeGetAllStaff() {
+        List<Staff> staffs = staffRepository.findAll();
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < staffs.size(); i++) {
+            Staff s = staffs.get(i);
+            sb.append("{");
+            sb.append("\"staffCode\":\"").append(escapeJson(s.getStaffCode())).append("\",");
+            sb.append("\"displayName\":\"").append(escapeJson(s.getDisplayName())).append("\",");
+            sb.append("\"email\":\"").append(escapeJson(s.getEmail())).append("\",");
+            sb.append("\"workingStatus\":\"").append(escapeJson(s.getWorkingStatus())).append("\",");
+            sb.append("\"department\":\"").append(s.getDepartment() != null ? escapeJson(s.getDepartment().getName()) : "—").append("\",");
+            sb.append("\"position\":\"").append(s.getPosition() != null ? escapeJson(s.getPosition().getName()) : "—").append("\"");
+            sb.append("}");
+            if (i < staffs.size() - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
+    private String executeGetAllDepartments() {
+        List<Department> depts = departmentRepository.findAll();
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < depts.size(); i++) {
+            Department d = depts.get(i);
+            sb.append("{");
+            sb.append("\"code\":\"").append(escapeJson(d.getCode())).append("\",");
+            sb.append("\"name\":\"").append(escapeJson(d.getName())).append("\",");
+            sb.append("\"description\":\"").append(d.getDescription() != null ? escapeJson(d.getDescription()) : "—").append("\"");
+            sb.append("}");
+            if (i < depts.size() - 1) {
+                sb.append(",");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
+    }
+
     private void executeLocalFallback(AiChatRequest request, OutputStream outputStream) {
         try {
             String lastQuery = "";
@@ -426,6 +495,8 @@ public class AiController {
         sb.append("Nhiệm vụ của bạn là hỗ trợ tra cứu thông tin nhân sự và số lượng nhân sự trong hệ thống. Bạn được cung cấp các công cụ (tools) chuyên dụng:\n");
         sb.append("- Sử dụng 'getStaffProfile' khi người dùng muốn xem thông tin chi tiết, email, số điện thoại, phòng ban, chức danh của một nhân sự cụ thể theo mã nhân viên.\n");
         sb.append("- Sử dụng 'getEmployeeCount' khi người dùng muốn biết tổng số lượng nhân sự hiện có trong toàn hệ thống.\n");
+        sb.append("- Sử dụng 'getAllStaff' khi người dùng muốn liệt kê toàn bộ nhân sự, tìm kiếm danh sách nhân viên hoặc xem bảng tổng hợp nhân viên.\n");
+        sb.append("- Sử dụng 'getAllDepartments' khi người dùng muốn liệt kê toàn bộ các phòng ban hoặc xem cơ cấu tổ chức.\n");
         sb.append("Khi thực hiện gọi công cụ, hãy điền đúng tham số và không thêm bất kỳ văn bản giải thích nào ngoài lệnh gọi công cụ.\n");
         sb.append("Khi trả lời người dùng, hãy trình bày bằng tiếng Việt, định dạng Markdown chuyên nghiệp, trực quan, có cấu trúc rõ ràng.\n");
         sb.append("HÃY TRẢ LỜI TẬP TRUNG VÀ ĐÚNG TRỌNG TÂM: Nếu người dùng chỉ hỏi một vài thông tin cụ thể của đối tượng, hãy chỉ trả lời trực tiếp các thông tin được hỏi đó. Không tự ý hiển thị toàn bộ hồ sơ hoặc chi tiết đối tượng trừ khi người dùng yêu cầu xem chi tiết.\n");
