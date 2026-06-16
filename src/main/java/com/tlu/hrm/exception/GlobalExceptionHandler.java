@@ -64,6 +64,12 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error("Lỗi: Phương thức '" + ex.getMethod() + "' không được hỗ trợ cho endpoint này", HttpStatus.METHOD_NOT_ALLOWED));
     }
 
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error("Lỗi dữ liệu: " + ex.getMessage(), HttpStatus.BAD_REQUEST));
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneralException(Exception ex) {
         // In a production app, we would log this using an SLF4J Logger

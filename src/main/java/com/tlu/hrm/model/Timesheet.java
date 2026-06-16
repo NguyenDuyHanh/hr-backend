@@ -25,6 +25,10 @@ public class Timesheet extends BaseModel {
     @JoinColumn(name = "staff_id", nullable = false)
     private Staff staff;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "period_id")
+    private Period period;
+
     @Column(name = "working_date", nullable = false)
     private LocalDate workingDate;
 

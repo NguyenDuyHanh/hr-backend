@@ -89,6 +89,11 @@ public class StaffDto {
     private String healthInsuranceNumber;
     private String socialInsuranceNote;
 
+    private String bankName;
+    private String bankAccountNumber;
+    private String bankAccountName;
+    private String bankBin;
+
     public StaffDto(Staff entity) {
         if (entity != null) {
             this.id = entity.getId();
@@ -162,6 +167,10 @@ public class StaffDto {
             this.socialInsuranceNumber = entity.getSocialInsuranceNumber();
             this.healthInsuranceNumber = entity.getHealthInsuranceNumber();
             this.socialInsuranceNote = entity.getSocialInsuranceNote();
+            this.bankName = entity.getBankName();
+            this.bankAccountNumber = entity.getBankAccountNumber();
+            this.bankAccountName = entity.getBankAccountName();
+            this.bankBin = entity.getBankBin();
         }
     }
 }

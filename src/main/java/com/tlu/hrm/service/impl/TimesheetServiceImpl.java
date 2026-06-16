@@ -35,6 +35,9 @@ public class TimesheetServiceImpl implements TimesheetService {
     private TimesheetRepository timesheetRepository;
 
     @Autowired
+    private PeriodRepository periodRepository;
+
+    @Autowired
     private TimesheetDetailRepository timesheetDetailRepository;
 
     @Autowired
@@ -57,6 +60,10 @@ public class TimesheetServiceImpl implements TimesheetService {
 
             if (request.getDepartmentId() != null) {
                 predicates.add(cb.equal(root.get("staff").get("department").get("id"), request.getDepartmentId()));
+            }
+
+            if (request.getPeriodId() != null) {
+                predicates.add(cb.equal(root.get("period").get("id"), request.getPeriodId()));
             }
 
             if (request.getFromDate() != null) {
@@ -125,6 +132,12 @@ public class TimesheetServiceImpl implements TimesheetService {
         entity.setStatus(dto.getStatus());
         entity.setNote(dto.getNote());
 
+        if (dto.getPeriodId() != null) {
+            periodRepository.findById(dto.getPeriodId()).ifPresent(entity::setPeriod);
+        } else if (entity.getWorkingDate() != null) {
+            periodRepository.findPeriodContainingDate(entity.getWorkingDate()).ifPresent(entity::setPeriod);
+        }
+
         Timesheet saved = timesheetRepository.save(entity);
         return new TimesheetDto(saved);
     }
@@ -165,6 +178,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                     ts.setWorkingDate(date);
                     return ts;
                 });
+
+        if (timesheet.getPeriod() == null && date != null) {
+            periodRepository.findPeriodContainingDate(date).ifPresent(timesheet::setPeriod);
+        }
 
         // Nếu bảng công đã được duyệt hoặc từ chối, giữ nguyên trạng thái bảng công
         if (timesheet.getStatus() == TimesheetStatus.APPROVED || timesheet.getStatus() == TimesheetStatus.REJECTED) {
