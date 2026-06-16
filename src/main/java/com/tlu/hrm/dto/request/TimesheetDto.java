@@ -22,6 +22,8 @@ public class TimesheetDto {
     private String staffCode;
     private String departmentName;
     private String positionName;
+    private UUID periodId;
+    private String periodName;
     private LocalDate workingDate;
     private Double totalWorkRatio;
     private Double standardHours;
@@ -43,6 +45,10 @@ public class TimesheetDto {
                 if (entity.getStaff().getPosition() != null) {
                     this.positionName = entity.getStaff().getPosition().getName();
                 }
+            }
+            if (entity.getPeriod() != null) {
+                this.periodId = entity.getPeriod().getId();
+                this.periodName = entity.getPeriod().getName();
             }
             this.workingDate = entity.getWorkingDate();
             this.totalWorkRatio = entity.getTotalWorkRatio();

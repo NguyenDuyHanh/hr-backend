@@ -152,7 +152,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                         String code = parts[0].trim();
                         String name = parts[1].trim();
                         String description = parts.length >= 3 ? parts[2].trim() : "";
-                        
+
                         Department dept = departmentRepository.findByCode(code)
                                 .orElseGet(() -> {
                                     Department newDept = new Department();
@@ -191,7 +191,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                         String name = parts[1].trim();
                         String description = parts.length >= 3 ? parts[2].trim() : "";
                         String deptCode = parts.length >= 4 ? parts[3].trim() : "";
-                        
+
                         Position pos = positionRepository.findByCode(code)
                                 .orElseGet(() -> {
                                     Position newPos = new Position();
@@ -201,11 +201,11 @@ public class DatabaseInitializer implements CommandLineRunner {
                         pos.setName(name);
                         pos.setDescription(description);
                         pos.setVoided(false);
-                        
+
                         if (!deptCode.isEmpty()) {
                             departmentRepository.findByCode(deptCode).ifPresent(pos::setDepartment);
                         }
-                        
+
                         positionRepository.save(pos);
                         System.out.println("Position " + name + " (" + code + ") seeded successfully.");
                     }

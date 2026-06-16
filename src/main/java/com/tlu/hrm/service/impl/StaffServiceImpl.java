@@ -177,6 +177,10 @@ public class StaffServiceImpl implements StaffService {
         staff.setSocialInsuranceNumber(dto.getSocialInsuranceNumber());
         staff.setHealthInsuranceNumber(dto.getHealthInsuranceNumber());
         staff.setSocialInsuranceNote(dto.getSocialInsuranceNote());
+        staff.setBankName(dto.getBankName());
+        staff.setBankAccountNumber(dto.getBankAccountNumber());
+        staff.setBankAccountName(dto.getBankAccountName());
+        staff.setBankBin(dto.getBankBin());
 
         Staff savedStaff = staffRepository.save(staff);
         return new StaffDto(savedStaff);

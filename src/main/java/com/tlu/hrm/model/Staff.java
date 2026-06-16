@@ -213,4 +213,16 @@ public class Staff extends BaseModel {
 
     @Column(name = "social_insurance_note")
     private String socialInsuranceNote;
+
+    @Column(name = "bank_name")
+    private String bankName;
+
+    @Column(name = "bank_account_number")
+    private String bankAccountNumber;
+
+    @Column(name = "bank_account_name")
+    private String bankAccountName;
+
+    @Column(name = "bank_bin")
+    private String bankBin;
 }
