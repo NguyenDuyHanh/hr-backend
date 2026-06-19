@@ -1,5 +1,6 @@
 package com.tlu.hrm.dto.request;
 
+import com.tlu.hrm.enums.CandidateStatus;
 import com.tlu.hrm.model.Candidate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -24,7 +25,7 @@ public class CandidateDto {
 
     private String currentResidence;
     private String cvFilePath;
-    private Integer status;
+    private CandidateStatus status;
     private String note;
 
     private UUID recruitmentId;

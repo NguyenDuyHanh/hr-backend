@@ -4,6 +4,7 @@ import com.tlu.hrm.dto.request.CandidateDto;
 import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.response.ApiResponse;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
+import com.tlu.hrm.enums.CandidateStatus;
 import com.tlu.hrm.service.CandidateService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -82,7 +83,7 @@ public class CandidateController {
     @PutMapping("/{id}/status")
     public ResponseEntity<ApiResponse<Boolean>> updateStatus(
             @PathVariable UUID id,
-            @RequestParam Integer status,
+            @RequestParam CandidateStatus status,
             @RequestParam(required = false) String refusalReason) {
         Boolean result = candidateService.updateStatus(id, status, refusalReason);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái ứng viên thành công", result));

@@ -96,6 +96,20 @@ public class StaffServiceImpl implements StaffService {
 
     @Override
     public StaffDto saveStaff(StaffDto dto) {
+        // Validate email uniqueness if email is provided
+        if (dto.getEmail() != null && !dto.getEmail().trim().isEmpty()) {
+            String email = dto.getEmail().trim();
+            boolean emailExists;
+            if (dto.getId() != null) {
+                emailExists = staffRepository.existsByEmailAndIdNotAndActive(email, dto.getId());
+            } else {
+                emailExists = staffRepository.existsByEmailAndActive(email);
+            }
+            if (emailExists) {
+                throw new com.tlu.hrm.exception.BadRequestException("Email đã tồn tại trong hệ thống");
+            }
+        }
+
         Staff staff;
         if (dto.getId() != null) {
             staff = staffRepository.findById(dto.getId()).orElse(new Staff());

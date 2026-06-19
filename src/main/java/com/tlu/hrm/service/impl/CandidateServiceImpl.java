@@ -3,6 +3,7 @@ package com.tlu.hrm.service.impl;
 import com.tlu.hrm.dto.request.CandidateDto;
 import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
+import com.tlu.hrm.enums.CandidateStatus;
 import com.tlu.hrm.exception.ResourceNotFoundException;
 import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
@@ -129,7 +130,7 @@ public class CandidateServiceImpl implements CandidateService {
 
         entity.setCurrentResidence(dto.getCurrentResidence());
         entity.setCvFilePath(dto.getCvFilePath());
-        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : 0); // Mặc định 0: Sơ tuyển hồ sơ
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : CandidateStatus.SCREENING); // Mặc định SCREENING: Sơ tuyển hồ sơ
         entity.setOnboardStatus(dto.getOnboardStatus() != null ? dto.getOnboardStatus() : 0);
         entity.setNote(dto.getNote());
 
@@ -221,11 +222,11 @@ public class CandidateServiceImpl implements CandidateService {
     }
 
     @Override
-    public Boolean updateStatus(UUID id, Integer status, String refusalReason) {
+    public Boolean updateStatus(UUID id, CandidateStatus status, String refusalReason) {
         Candidate cand = candidateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ứng viên để cập nhật trạng thái với ID: " + id));
         cand.setStatus(status);
-        if (status == 5 && refusalReason != null) {
+        if (status == CandidateStatus.REJECTED && refusalReason != null) {
             cand.setNote(refusalReason);
         }
         candidateRepository.save(cand);
@@ -262,7 +263,7 @@ public class CandidateServiceImpl implements CandidateService {
 
         // Cập nhật trạng thái ứng viên
         cand.setOnboardStatus(1);
-        cand.setStatus(4); // 4: Đã onboard
+        cand.setStatus(CandidateStatus.ONBOARDED); // Đã onboard
 
         candidateRepository.save(cand);
 
