@@ -225,4 +225,7 @@ public class Staff extends BaseModel {
 
     @Column(name = "bank_bin")
     private String bankBin;
+
+    @Column(name = "annual_leave_limit")
+    private Double annualLeaveLimit = 12.0;
 }
