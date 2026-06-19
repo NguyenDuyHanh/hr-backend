@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -30,7 +31,9 @@ public class SalaryItemServiceImpl implements SalaryItemService {
 
     @Override
     public List<SalaryItem> getAllSalaryItems() {
-        return salaryItemRepository.findAll();
+        return salaryItemRepository.findAll().stream()
+                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -50,12 +53,17 @@ public class SalaryItemServiceImpl implements SalaryItemService {
 
     @Override
     public void deleteSalaryItem(UUID id) {
-        salaryItemRepository.deleteById(id);
+        SalaryItem item = salaryItemRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Khoản lương không tồn tại"));
+        item.setVoided(true);
+        salaryItemRepository.save(item);
     }
 
     @Override
     public List<StaffSalaryItem> getStaffSalaryItems(UUID staffId) {
-        return staffSalaryItemRepository.findByStaffId(staffId);
+        return staffSalaryItemRepository.findByStaffId(staffId).stream()
+                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -64,8 +72,13 @@ public class SalaryItemServiceImpl implements SalaryItemService {
         Staff staff = staffRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại"));
 
-        List<StaffSalaryItem> oldItems = staffSalaryItemRepository.findByStaffId(staffId);
-        staffSalaryItemRepository.deleteAll(oldItems);
+        List<StaffSalaryItem> oldItems = staffSalaryItemRepository.findByStaffId(staffId).stream()
+                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .collect(Collectors.toList());
+        for (StaffSalaryItem oldItem : oldItems) {
+            oldItem.setVoided(true);
+        }
+        staffSalaryItemRepository.saveAll(oldItems);
 
         List<StaffSalaryItem> toSave = new ArrayList<>();
         for (StaffSalaryItem item : items) {

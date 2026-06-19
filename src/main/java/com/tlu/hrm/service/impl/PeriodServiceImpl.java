@@ -2,6 +2,7 @@ package com.tlu.hrm.service.impl;
 
 import com.tlu.hrm.model.Period;
 import com.tlu.hrm.model.Payroll;
+import com.tlu.hrm.model.Payslip;
 import com.tlu.hrm.repository.PeriodRepository;
 import com.tlu.hrm.repository.PayrollRepository;
 import com.tlu.hrm.repository.PayslipRepository;
@@ -22,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -48,7 +50,8 @@ public class PeriodServiceImpl implements PeriodService {
             finalCode = code.trim().toUpperCase();
         }
 
-        if (periodRepository.findByCode(finalCode).isPresent()) {
+        Optional<Period> existing = periodRepository.findByCode(finalCode);
+        if (existing.isPresent() && (existing.get().getVoided() == null || !existing.get().getVoided())) {
             throw new CustomException("Mã kỳ lương '" + finalCode + "' đã tồn tại", HttpStatus.BAD_REQUEST);
         }
 
@@ -77,7 +80,7 @@ public class PeriodServiceImpl implements PeriodService {
         }
 
         Optional<Period> existing = periodRepository.findByCode(finalCode);
-        if (existing.isPresent() && !existing.get().getId().equals(id)) {
+        if (existing.isPresent() && !existing.get().getId().equals(id) && (existing.get().getVoided() == null || !existing.get().getVoided())) {
             throw new CustomException("Mã kỳ lương '" + finalCode + "' đã tồn tại ở một kỳ lương khác", HttpStatus.BAD_REQUEST);
         }
 
@@ -94,18 +97,30 @@ public class PeriodServiceImpl implements PeriodService {
 
     @Override
     public List<Period> getAllPeriods() {
-        return periodRepository.findAll();
+        return periodRepository.findAll().stream()
+                .filter(period -> period.getVoided() == null || !period.getVoided())
+                .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
     public void deletePeriod(UUID periodId) {
+        Period period = periodRepository.findById(periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Kỳ lương không tồn tại"));
+        period.setVoided(true);
+        periodRepository.save(period);
+
         List<Payroll> payrolls = payrollRepository.findByPayrollPeriodId(periodId);
         for (Payroll payroll : payrolls) {
-            payslipRepository.deleteByPayrollId(payroll.getId());
-            payrollRepository.delete(payroll);
+            payroll.setVoided(true);
+            payrollRepository.save(payroll);
+
+            List<Payslip> payslips = payslipRepository.findByPayrollId(payroll.getId());
+            for (Payslip payslip : payslips) {
+                payslip.setVoided(true);
+            }
+            payslipRepository.saveAll(payslips);
         }
-        periodRepository.deleteById(periodId);
     }
 
     @Override

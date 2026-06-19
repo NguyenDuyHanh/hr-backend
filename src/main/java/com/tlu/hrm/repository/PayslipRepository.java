@@ -6,12 +6,14 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import com.tlu.hrm.enums.PayrollStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 @Repository
 public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpecificationExecutor<Payslip> {
     void deleteByPayrollId(UUID payrollId);
+    List<Payslip> findByPayrollId(UUID payrollId);
     Optional<Payslip> findByStaffIdAndPayrollId(UUID staffId, UUID payrollId);
     Optional<Payslip> findByStaffIdAndPayrollPayrollPeriodIdAndPayrollStatus(UUID staffId, UUID payrollPeriodId, PayrollStatus status);
 }

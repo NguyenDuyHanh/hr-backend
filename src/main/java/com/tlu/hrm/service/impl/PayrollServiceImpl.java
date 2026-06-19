@@ -13,6 +13,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.jpa.domain.Specification;
 
 @Service
@@ -78,12 +79,16 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public List<Payroll> getPayrollsByPeriod(UUID periodId) {
-        return payrollRepository.findByPayrollPeriodId(periodId);
+        return payrollRepository.findByPayrollPeriodId(periodId).stream()
+                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .collect(Collectors.toList());
     }
 
     @Override
     public List<Payroll> getAllPayrolls() {
-        return payrollRepository.findAll();
+        return payrollRepository.findAll().stream()
+                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -152,8 +157,16 @@ public class PayrollServiceImpl implements PayrollService {
     @Override
     @Transactional
     public void deletePayroll(UUID payrollId) {
-        payslipRepository.deleteByPayrollId(payrollId);
-        payrollRepository.deleteById(payrollId);
+        Payroll payroll = payrollRepository.findById(payrollId)
+                .orElseThrow(() -> new IllegalArgumentException("Bảng lương không tồn tại"));
+        payroll.setVoided(true);
+        payrollRepository.save(payroll);
+
+        List<Payslip> payslips = payslipRepository.findByPayrollId(payrollId);
+        for (Payslip payslip : payslips) {
+            payslip.setVoided(true);
+        }
+        payslipRepository.saveAll(payslips);
     }
 
     @Override

@@ -5,6 +5,7 @@ import com.tlu.hrm.dto.request.TimesheetDto;
 import com.tlu.hrm.dto.search.TimesheetSearchRequest;
 import com.tlu.hrm.enums.CheckInOutType;
 import com.tlu.hrm.enums.TimesheetStatus;
+import com.tlu.hrm.enums.LeaveType;
 import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
 import com.tlu.hrm.service.TimesheetService;
@@ -48,6 +49,9 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     @Autowired
     private CheckInOutRecordRepository checkInOutRecordRepository;
+
+    @Autowired
+    private LeaveRequestRepository leaveRequestRepository;
 
     @Override
     public Page<TimesheetDto> search(TimesheetSearchRequest request) {
@@ -181,6 +185,115 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         if (timesheet.getPeriod() == null && date != null) {
             periodRepository.findPeriodContainingDate(date).ifPresent(timesheet::setPeriod);
+        }
+
+        // Tích hợp Đơn nghỉ phép đã duyệt
+        List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeaveRequestsOnDate(staffId, date);
+        if (!approvedLeaves.isEmpty()) {
+            LeaveRequest leave = approvedLeaves.get(0);
+            boolean isPaid = leave.getLeaveType() != LeaveType.UNPAID;
+
+            if (leave.getHalfDayLeave() != null && leave.getHalfDayLeave()) {
+                // Nghỉ nửa ngày: Tạo 1 chi tiết công nghỉ phép và quét log cho ca còn lại
+                timesheet.getDetails().clear();
+                
+                ShiftWork offShift = leave.getShiftWorkStart();
+                if (offShift == null) {
+                    offShift = shiftWorkRepository.findByCode("CA_SANG").orElse(null);
+                }
+                
+                if (offShift != null) {
+                    TimesheetDetail leaveDetail = new TimesheetDetail();
+                    leaveDetail.setTimesheet(timesheet);
+                    leaveDetail.setShift(offShift);
+                    leaveDetail.setCheckInTime(date.atTime(offShift.getStartTime()));
+                    leaveDetail.setCheckOutTime(date.atTime(offShift.getEndTime()));
+                    leaveDetail.setWorkRatio(isPaid ? 0.5 : 0.0);
+                    leaveDetail.setLateMinutes(0);
+                    leaveDetail.setEarlyMinutes(0);
+                    timesheet.getDetails().add(leaveDetail);
+                    
+                    // Quét log ca còn lại (ca đi làm thực tế)
+                    LocalDateTime startOfDay = date.atStartOfDay();
+                    LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
+                    List<CheckInOutRecord> rawLogs = checkInOutRecordRepository
+                            .findByStaffIdAndRecordTimeBetweenOrderByRecordTimeAsc(staffId, startOfDay, endOfDay);
+                    
+                    String workingShiftCode = "CA_CHIEU".equals(offShift.getCode()) ? "CA_SANG" : "CA_CHIEU";
+                    ShiftWork workingShift = shiftWorkRepository.findByCode(workingShiftCode).orElse(null);
+                    
+                    if (workingShift != null && !rawLogs.isEmpty()) {
+                        List<CheckInOutRecord> workingInLogs = new ArrayList<>();
+                        List<CheckInOutRecord> workingOutLogs = new ArrayList<>();
+                        for (CheckInOutRecord log : rawLogs) {
+                            if (log.getShift() != null && log.getShift().getCode().equals(workingShiftCode)) {
+                                if (log.getRecordType() == CheckInOutType.CHECK_IN) {
+                                    workingInLogs.add(log);
+                                } else {
+                                    workingOutLogs.add(log);
+                                }
+                            } else if (log.getShift() == null) {
+                                LocalTime t = log.getRecordTime().toLocalTime();
+                                if (log.getRecordType() == CheckInOutType.CHECK_IN) {
+                                    if ("CA_SANG".equals(workingShiftCode) && !t.isAfter(LocalTime.of(11, 30))) {
+                                        workingInLogs.add(log);
+                                    } else if ("CA_CHIEU".equals(workingShiftCode) && t.isAfter(LocalTime.of(12, 0))) {
+                                        workingInLogs.add(log);
+                                    }
+                                } else {
+                                    if ("CA_SANG".equals(workingShiftCode) && t.isBefore(LocalTime.of(13, 0))) {
+                                        workingOutLogs.add(log);
+                                    } else if ("CA_CHIEU".equals(workingShiftCode) && t.isAfter(LocalTime.of(16, 0))) {
+                                        workingOutLogs.add(log);
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if (!workingInLogs.isEmpty() || !workingOutLogs.isEmpty()) {
+                            TimesheetDetail workingDetail = new TimesheetDetail();
+                            workingDetail.setTimesheet(timesheet);
+                            workingDetail.setShift(workingShift);
+                            CheckInOutRecord inRec = workingInLogs.isEmpty() ? null : workingInLogs.get(0);
+                            CheckInOutRecord outRec = workingOutLogs.isEmpty() ? null : workingOutLogs.get(workingOutLogs.size() - 1);
+                            mapCheckInOut(workingDetail, inRec, outRec, workingShift.getStartTime(), workingShift.getEndTime(), 0.5);
+                            timesheet.getDetails().add(workingDetail);
+                        }
+                    }
+                    
+                    double totalRatio = 0.0;
+                    for (TimesheetDetail d : timesheet.getDetails()) {
+                        totalRatio += d.getWorkRatio() != null ? d.getWorkRatio() : 0.0;
+                    }
+                    timesheet.setTotalWorkRatio(totalRatio);
+                    timesheet.setStandardHours(calculateStandardHours(timesheet.getDetails()));
+                    timesheet.setOvertimeHours(calculateOvertimeHours(timesheet.getDetails()));
+                    timesheet.setStatus(TimesheetStatus.APPROVED);
+                    timesheet.setNote("Nghỉ nửa ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                    timesheetRepository.save(timesheet);
+                    return;
+                }
+            } else {
+                // Nghỉ cả ngày
+                timesheet.getDetails().clear();
+                timesheet.setTotalWorkRatio(isPaid ? 1.0 : 0.0);
+                timesheet.setStandardHours(isPaid ? 8.0 : 0.0);
+                timesheet.setOvertimeHours(0.0);
+                
+                TimesheetDetail leaveDetail = new TimesheetDetail();
+                leaveDetail.setTimesheet(timesheet);
+                ShiftWork fullDayShift = shiftWorkRepository.findByCode("CA_CA_NGAY").orElse(null);
+                leaveDetail.setShift(fullDayShift);
+                leaveDetail.setWorkRatio(isPaid ? 1.0 : 0.0);
+                leaveDetail.setLateMinutes(0);
+                leaveDetail.setEarlyMinutes(0);
+                timesheet.getDetails().add(leaveDetail);
+                
+                timesheet.setStatus(TimesheetStatus.APPROVED);
+                timesheet.setNote("Nghỉ cả ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                timesheetRepository.save(timesheet);
+                return;
+            }
         }
 
         // Nếu bảng công đã được duyệt hoặc từ chối, giữ nguyên trạng thái bảng công
