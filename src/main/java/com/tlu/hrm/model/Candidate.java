@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDate;
+import com.tlu.hrm.enums.CandidateStatus;
 
 @Entity
 @Table(name = "tbl_candidate")
@@ -40,9 +41,9 @@ public class Candidate extends BaseModel {
     @Column(name = "cv_file_path")
     private String cvFilePath;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status")
-    private Integer status; // 0: Sơ tuyển, 1: Phỏng vấn, 2: Đạt yêu cầu, 3: Chờ việc, 4: Đã onboard, 5: Từ
-                            // chối
+    private CandidateStatus status; // SCREENING, INTERVIEW, QUALIFIED, WAITING, ONBOARDED, REJECTED
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recruitment_id")
     private Recruitment recruitment;

@@ -1,5 +1,6 @@
 package com.tlu.hrm.dto.search;
 
+import com.tlu.hrm.enums.CandidateStatus;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,5 +10,5 @@ import java.util.UUID;
 @Setter
 public class SearchCandidateDto extends SearchDto {
     private UUID recruitmentId;
-    private Integer status;
+    private CandidateStatus status;
 }

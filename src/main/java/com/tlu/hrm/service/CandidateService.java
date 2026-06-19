@@ -3,6 +3,7 @@ package com.tlu.hrm.service;
 import com.tlu.hrm.dto.request.CandidateDto;
 import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
+import com.tlu.hrm.enums.CandidateStatus;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -16,6 +17,6 @@ public interface CandidateService {
     void deleteMultiple(List<UUID> ids);
     boolean isValidCode(CandidateDto dto);
     String generateCode();
-    Boolean updateStatus(UUID id, Integer status, String refusalReason);
+    Boolean updateStatus(UUID id, CandidateStatus status, String refusalReason);
     StaffDto convertToReceivedJob(UUID id);
 }
