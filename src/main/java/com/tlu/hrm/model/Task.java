@@ -17,13 +17,10 @@ public class Task extends BaseModel {
     private String name;
 
     @Column(name = "code")
-    private Long code; // auto-increment per project
+    private String code; // auto-increment per project
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
-
-    @Column(name = "comment", columnDefinition = "TEXT")
-    private String comment;
 
     @Column(name = "priority")
     private Integer priority; // 1=Low, 2=Medium, 3=High, 4=Urgent
@@ -52,10 +49,6 @@ public class Task extends BaseModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assignee_id")
     private Staff assignee; // người phụ trách
-
-    @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(name = "tbl_task_follower", joinColumns = @JoinColumn(name = "task_id"), inverseJoinColumns = @JoinColumn(name = "staff_id"))
-    private Set<Staff> staffs = new HashSet<>(); // người theo dõi
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<TaskAttachment> attachments = new HashSet<>();

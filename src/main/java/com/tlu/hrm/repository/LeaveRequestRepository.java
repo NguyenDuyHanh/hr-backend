@@ -16,13 +16,13 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
 
     @Query("SELECT COALESCE(SUM(r.totalDays), 0.0) FROM LeaveRequest r WHERE r.requestStaff.id = :staffId " +
            "AND r.leaveType = 'ANNUAL' AND r.approvalStatus = 'APPROVED' " +
-           "AND r.voided = false AND EXTRACT(YEAR FROM r.fromDate) = :year")
+           "AND r.isDeleted = false AND EXTRACT(YEAR FROM r.fromDate) = :year")
     Double calculateUsedAnnualLeave(@Param("staffId") UUID staffId, @Param("year") int year);
 
     @Query("SELECT r FROM LeaveRequest r WHERE r.requestStaff.id = :staffId " +
            "AND (:excludeId IS NULL OR r.id != :excludeId) " +
            "AND r.approvalStatus != 'REJECTED' " +
-           "AND r.voided = false " +
+           "AND r.isDeleted = false " +
            "AND r.fromDate <= :toDate AND r.toDate >= :fromDate")
     List<LeaveRequest> findOverlappingRequests(
             @Param("staffId") UUID staffId,
@@ -32,7 +32,7 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
 
     @Query("SELECT r FROM LeaveRequest r WHERE r.requestStaff.id = :staffId " +
            "AND r.approvalStatus = 'APPROVED' " +
-           "AND r.voided = false " +
+           "AND r.isDeleted = false " +
            "AND :date BETWEEN r.fromDate AND r.toDate")
     List<LeaveRequest> findApprovedLeaveRequestsOnDate(
             @Param("staffId") UUID staffId,

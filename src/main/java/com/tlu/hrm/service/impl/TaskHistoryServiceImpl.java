@@ -34,7 +34,7 @@ public class TaskHistoryServiceImpl implements TaskHistoryService {
 
     @Override
     public List<TaskHistoryResponse> getHistoryByTaskId(UUID taskId) {
-        return taskHistoryRepository.findByTaskIdAndVoidedFalseOrderByCreateDateDesc(taskId).stream()
+        return taskHistoryRepository.findByTaskIdAndIsDeletedFalseOrderByCreateDateDesc(taskId).stream()
                 .map(TaskHistoryResponse::new)
                 .collect(Collectors.toList());
     }
@@ -51,7 +51,7 @@ public class TaskHistoryServiceImpl implements TaskHistoryService {
         history.setTask(task);
         history.setModifier(modifier);
         history.setComment(comment);
-        history.setVoided(false);
+        history.setIsDeleted(false);
 
         TaskHistory saved = taskHistoryRepository.save(history);
         return new TaskHistoryResponse(saved);
@@ -92,7 +92,7 @@ public class TaskHistoryServiceImpl implements TaskHistoryService {
             throw new AccessDeniedException("Bạn không có quyền xóa bình luận này");
         }
 
-        history.setVoided(true);
+        history.setIsDeleted(true);
         taskHistoryRepository.save(history);
     }
 
@@ -108,7 +108,7 @@ public class TaskHistoryServiceImpl implements TaskHistoryService {
         history.setTask(task);
         history.setModifier(modifier);
         history.setEvent(event);
-        history.setVoided(false);
+        history.setIsDeleted(false);
 
         taskHistoryRepository.save(history);
     }

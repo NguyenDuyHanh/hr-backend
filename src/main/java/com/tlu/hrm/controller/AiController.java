@@ -341,12 +341,10 @@ public class AiController {
         sb.append("\"gender\":\"").append(escapeJson(foundStaff.getGender())).append("\",");
         sb.append("\"workingStatus\":\"").append(escapeJson(foundStaff.getWorkingStatus())).append("\",");
         sb.append("\"birthDate\":\"").append(foundStaff.getBirthDate() != null ? foundStaff.getBirthDate().toString() : "—").append("\",");
-        sb.append("\"recruitmentDate\":\"").append(foundStaff.getRecruitmentDate() != null ? foundStaff.getRecruitmentDate().toString() : "—").append("\",");
         sb.append("\"startDate\":\"").append(foundStaff.getStartDate() != null ? foundStaff.getStartDate().toString() : "—").append("\",");
         sb.append("\"idNumber\":\"").append(foundStaff.getIdNumber() != null ? escapeJson(foundStaff.getIdNumber()) : "—").append("\",");
         sb.append("\"currentAddress\":\"").append(foundStaff.getCurrentAddress() != null ? escapeJson(foundStaff.getCurrentAddress()) : "—").append("\",");
         sb.append("\"socialInsuranceCode\":\"").append(foundStaff.getSocialInsuranceCode() != null ? escapeJson(foundStaff.getSocialInsuranceCode()) : "—").append("\",");
-        sb.append("\"level\":\"").append(foundStaff.getLevel() != null ? escapeJson(foundStaff.getLevel()) : "—").append("\",");
         sb.append("\"department\":\"").append(foundStaff.getDepartment() != null ? escapeJson(foundStaff.getDepartment().getName()) : "—").append("\",");
         sb.append("\"position\":\"").append(foundStaff.getPosition() != null ? escapeJson(foundStaff.getPosition().getName()) : "—").append("\"");
         sb.append("}");

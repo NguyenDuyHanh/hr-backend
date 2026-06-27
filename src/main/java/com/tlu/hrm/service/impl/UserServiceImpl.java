@@ -37,14 +37,13 @@ public class UserServiceImpl implements UserService {
     @Override
     public Page<UserDto> getAllUsers(SearchDto searchDto) {
         List<User> filteredList = userRepository.findAll().stream()
-                .filter(user -> user.getVoided() == null || !user.getVoided())
+                .filter(user -> user.getIsDeleted() == null || !user.getIsDeleted())
                 .filter(user -> {
                     if (searchDto != null) {
                         // 1. Keyword search (username, email, staff display name, staff code)
                         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
                             String keyword = searchDto.getKeyword().toLowerCase();
                             boolean matches = (user.getUsername() != null && user.getUsername().toLowerCase().contains(keyword))
-                                || (user.getEmail() != null && user.getEmail().toLowerCase().contains(keyword))
                                 || (user.getStaff() != null && (
                                     (user.getStaff().getDisplayName() != null && user.getStaff().getDisplayName().toLowerCase().contains(keyword))
                                     || (user.getStaff().getStaffCode() != null && user.getStaff().getStaffCode().toLowerCase().contains(keyword))
@@ -105,7 +104,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<UserDto> getAllUsersUnpaginated() {
         return userRepository.findAll().stream()
-                .filter(user -> user.getVoided() == null || !user.getVoided())
+                .filter(user -> user.getIsDeleted() == null || !user.getIsDeleted())
                 .map(UserDto::new)
                 .collect(Collectors.toList());
     }
@@ -129,7 +128,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(UUID id) {
         userRepository.findById(id).ifPresent(user -> {
-            user.setVoided(true);
+            user.setIsDeleted(true);
             userRepository.save(user);
         });
     }
@@ -137,7 +136,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public boolean existsById(UUID id) {
         return userRepository.findById(id)
-                .map(user -> user.getVoided() == null || !user.getVoided())
+                .map(user -> user.getIsDeleted() == null || !user.getIsDeleted())
                 .orElse(false);
     }
 
@@ -155,7 +154,6 @@ public class UserServiceImpl implements UserService {
                 user.setPassword(passwordEncoder.encode(dto.getPassword()));
             }
         }
-        user.setEmail(dto.getEmail());
         user.setActive(dto.getActive());
         if (user.getUserRoles() == null) {
             user.setUserRoles(new HashSet<>());

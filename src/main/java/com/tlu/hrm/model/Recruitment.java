@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import com.tlu.hrm.enums.RecruitmentStatus;
 
 @Entity
 @Table(name = "tbl_recruitment")
@@ -23,8 +24,9 @@ public class Recruitment extends BaseModel {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
+    @Enumerated(EnumType.ORDINAL)
     @Column(name = "status")
-    private Integer status; // Trạng thái tin tuyển dụng (0: Nháp, 1: Đang tuyển, 2: Tạm dừng, 3: Đã đóng)
+    private RecruitmentStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "person_approve_cv")

@@ -28,9 +28,6 @@ public class User extends BaseModel implements UserDetails {
     @Column(name = "password", nullable = false)
     private String password;
 
-    @Column(name = "email")
-    private String email;
-
     @Column(name = "active")
     private Boolean active = true;
 

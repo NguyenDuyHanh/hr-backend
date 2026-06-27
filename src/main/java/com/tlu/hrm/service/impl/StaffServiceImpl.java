@@ -34,7 +34,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public Page<StaffDto> getAllStaffs(SearchDto searchDto) {
         List<Staff> filteredList = staffRepository.findAll().stream()
-                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
                 .filter(staff -> {
                     if (searchDto != null) {
                         // 1. Keyword search
@@ -82,7 +82,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public List<StaffDto> getAllStaffsUnpaginated() {
         return staffRepository.findAll().stream()
-                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
                 .map(StaffDto::new)
                 .collect(Collectors.toList());
     }
@@ -90,7 +90,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public Optional<StaffDto> getStaffById(UUID id) {
         return staffRepository.findById(id)
-                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
                 .map(StaffDto::new);
     }
 
@@ -125,11 +125,9 @@ public class StaffServiceImpl implements StaffService {
         staff.setEmail(dto.getEmail());
         staff.setWorkingStatus(dto.getWorkingStatus());
         staff.setIdNumber(dto.getIdNumber());
-        staff.setRecruitmentDate(dto.getRecruitmentDate());
         staff.setStartDate(dto.getStartDate());
         staff.setCurrentAddress(dto.getCurrentAddress());
         staff.setSocialInsuranceCode(dto.getSocialInsuranceCode());
-        staff.setLevel(dto.getLevel());
         
         if (dto.getDepartmentId() != null) {
             departmentRepository.findById(dto.getDepartmentId()).ifPresent(staff::setDepartment);
@@ -144,53 +142,21 @@ public class StaffServiceImpl implements StaffService {
         }
 
         // Map expanded fields
-        staff.setImagePath(dto.getImagePath());
-        staff.setMaritalStatus(dto.getMaritalStatus());
+        staff.setAvatarUrl(dto.getAvatarUrl());
         staff.setBirthPlace(dto.getBirthPlace());
-        staff.setNationalityId(dto.getNationalityId());
-        staff.setEthnicsId(dto.getEthnicsId());
-        staff.setReligionId(dto.getReligionId());
-        staff.setEducationDegreeId(dto.getEducationDegreeId());
-        staff.setProvinceId(dto.getProvinceId());
-        staff.setAdministrativeunitId(dto.getAdministrativeunitId());
+        staff.setNationality(dto.getNationality());
+        staff.setEthnics(dto.getEthnics());
+        staff.setReligion(dto.getReligion());
+        staff.setEducationDegree(dto.getEducationDegree());
+        staff.setProvince(dto.getProvince());
+        staff.setCommune(dto.getCommune());
         staff.setPermanentResidence(dto.getPermanentResidence());
         staff.setCurrentResidence(dto.getCurrentResidence());
-        staff.setHomeTown(dto.getHomeTown());
         staff.setIdNumberIssueDate(dto.getIdNumberIssueDate());
         staff.setIdNumberIssueBy(dto.getIdNumberIssueBy());
-        staff.setPersonalIdentificationNumber(dto.getPersonalIdentificationNumber());
-        staff.setPersonalIdentificationIssueDate(dto.getPersonalIdentificationIssueDate());
-        staff.setPersonalIdentificationIssuePlace(dto.getPersonalIdentificationIssuePlace());
-        staff.setPassportNumber(dto.getPassportNumber());
-        staff.setWorkPermitNumber(dto.getWorkPermitNumber());
-        staff.setStatusId(dto.getStatusId());
-        staff.setStaffWorkingFormat(dto.getStaffWorkingFormat());
-        staff.setIntroducerId(dto.getIntroducerId());
-        staff.setRecruiterId(dto.getRecruiterId());
-        staff.setApprenticeDays(dto.getApprenticeDays());
         staff.setCompanyEmail(dto.getCompanyEmail());
-        staff.setStaffPhase(dto.getStaffPhase());
-        staff.setStaffPositionType(dto.getStaffPositionType());
-        staff.setHealthCareRegistrationPlaceId(dto.getHealthCareRegistrationPlaceId());
-        staff.setStaffWorkShiftType(dto.getStaffWorkShiftType());
-        staff.setFixShiftWorkId(dto.getFixShiftWorkId());
-        staff.setStaffLeaveShiftType(dto.getStaffLeaveShiftType());
-        staff.setFixLeaveWeekDay(dto.getFixLeaveWeekDay());
-        staff.setFixLeaveWeekDay2(dto.getFixLeaveWeekDay2());
-        staff.setSkipTimekeeping(dto.getSkipTimekeeping());
-        staff.setSkipLateEarlyCount(dto.getSkipLateEarlyCount());
-        staff.setSkipOvertimeCount(dto.getSkipOvertimeCount());
-        staff.setOnBlacklist(dto.getOnBlacklist());
-        staff.setHasSocialIns(dto.getHasSocialIns());
-        staff.setUnemploymentDeclaration(dto.getUnemploymentDeclaration());
-        staff.setAllowExternalIpTimekeeping(dto.getAllowExternalIpTimekeeping());
-        staff.setOrganizationId(dto.getOrganizationId());
-        staff.setPositionTitleId(dto.getPositionTitleId());
-        staff.setContactPersonInfo(dto.getContactPersonInfo());
         staff.setTaxCode(dto.getTaxCode());
-        staff.setSocialInsuranceNumber(dto.getSocialInsuranceNumber());
         staff.setHealthInsuranceNumber(dto.getHealthInsuranceNumber());
-        staff.setSocialInsuranceNote(dto.getSocialInsuranceNote());
         staff.setBankName(dto.getBankName());
         staff.setBankAccountNumber(dto.getBankAccountNumber());
         staff.setBankAccountName(dto.getBankAccountName());
@@ -203,7 +169,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public void deleteStaff(UUID id) {
         staffRepository.findById(id).ifPresent(staff -> {
-            staff.setVoided(true);
+            staff.setIsDeleted(true);
             staffRepository.save(staff);
         });
     }
@@ -211,7 +177,7 @@ public class StaffServiceImpl implements StaffService {
     @Override
     public boolean existsById(UUID id) {
         return staffRepository.findById(id)
-                .map(staff -> staff.getVoided() == null || !staff.getVoided())
+                .map(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
                 .orElse(false);
     }
 

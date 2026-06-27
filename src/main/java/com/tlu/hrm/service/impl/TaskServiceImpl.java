@@ -71,7 +71,7 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public TaskResponse getTaskById(UUID id) {
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc với ID: " + id));
         return new TaskResponse(task);
     }
@@ -98,7 +98,7 @@ public class TaskServiceImpl implements TaskService {
 
         task.setName(request.getName());
         task.setDescription(request.getDescription());
-        task.setComment(request.getComment());
+
         task.setPriority(request.getPriority());
         task.setStartTime(request.getStartTime());
         task.setEndTime(request.getEndTime());
@@ -111,8 +111,24 @@ public class TaskServiceImpl implements TaskService {
             task.setProject(project);
 
             if (isNew && task.getCode() == null) {
-                Long maxCode = taskRepository.findMaxCodeByProjectId(project.getId());
-                task.setCode((maxCode == null) ? 1L : maxCode + 1L);
+                String prefix = project.getCode() != null ? project.getCode() + "-" : "TASK-";
+                List<Task> existingTasks = taskRepository.findByProjectId(project.getId());
+                long maxStt = 0;
+                for (Task existingTask : existingTasks) {
+                    String existingCode = existingTask.getCode();
+                    if (existingCode != null && existingCode.startsWith(prefix)) {
+                        try {
+                            String suffix = existingCode.substring(prefix.length());
+                            long stt = Long.parseLong(suffix);
+                            if (stt > maxStt) {
+                                maxStt = stt;
+                            }
+                        } catch (NumberFormatException e) {
+                            // Ignored
+                        }
+                    }
+                }
+                task.setCode(prefix + (maxStt + 1));
             }
         }
 
@@ -147,17 +163,9 @@ public class TaskServiceImpl implements TaskService {
             task.setAssignee(null);
         }
 
-        if (request.getFollowerIds() != null) {
-            Set<Staff> followers = new HashSet<>();
-            for (UUID fid : request.getFollowerIds()) {
-                staffRepository.findById(fid).ifPresent(followers::add);
-            }
-            task.setStaffs(followers);
-        } else {
-            task.getStaffs().clear();
-        }
 
-        task.setVoided(false);
+
+        task.setIsDeleted(false);
         Task saved = taskRepository.save(task);
 
         // Lịch sử / Event logging
@@ -190,7 +198,7 @@ public class TaskServiceImpl implements TaskService {
     public void deleteTask(UUID id) {
         Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc với ID: " + id));
-        task.setVoided(true);
+        task.setIsDeleted(true);
         taskRepository.save(task);
         taskHistoryService.logEvent(id, "Đã xóa công việc");
     }
@@ -243,7 +251,7 @@ public class TaskServiceImpl implements TaskService {
         TaskSearchRequest countRequest = new TaskSearchRequest();
         countRequest.setProjectId(projectId);
         countRequest.setAssigneeId(request.getAssigneeId());
-        countRequest.setFollowerId(request.getFollowerId());
+
         countRequest.setActivityIds(request.getActivityIds());
         countRequest.setPriorities(request.getPriorities());
         countRequest.setStartCreatedDate(request.getStartCreatedDate());
@@ -271,7 +279,7 @@ public class TaskServiceImpl implements TaskService {
         Staff currentStaff = (currentUser != null) ? currentUser.getStaff() : null;
 
         return taskRepository.findAll().stream()
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .filter(t -> {
                     // Employee chỉ xem được task của dự án họ tham gia
                     if (!isManager) {
@@ -283,7 +291,7 @@ public class TaskServiceImpl implements TaskService {
 
                         // Check xem user có thuộc dự án không
                         boolean isMemberOfProject = project.getProjectStaffs().stream()
-                                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                                 .anyMatch(ps -> ps.getStaff() != null
                                         && ps.getStaff().getId().equals(currentStaff.getId()));
                         if (!isMemberOfProject) {
@@ -292,18 +300,15 @@ public class TaskServiceImpl implements TaskService {
 
                         // Check xem user có phải Project Manager của dự án này không
                         boolean isProjectManager = project.getProjectStaffs().stream()
-                                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                                 .anyMatch(ps -> ps.getStaff() != null
                                         && ps.getStaff().getId().equals(currentStaff.getId())
                                         && com.tlu.hrm.enums.ProjectRole.MANAGER.equals(ps.getProjectRole()));
 
-                        // Nếu không phải Project Manager, chỉ được xem task của chính mình (assignee hoặc follower)
+                        // Nếu không phải Project Manager, chỉ được xem task của chính mình (assignee)
                         if (!isProjectManager) {
-                            boolean isAssignee = t.getAssignee() != null
+                            return t.getAssignee() != null
                                     && t.getAssignee().getId().equals(currentStaff.getId());
-                            boolean isFollower = t.getStaffs() != null && t.getStaffs().stream()
-                                    .anyMatch(s -> s.getId().equals(currentStaff.getId()));
-                            return isAssignee || isFollower;
                         }
                     }
                     return true;
@@ -320,12 +325,7 @@ public class TaskServiceImpl implements TaskService {
                                 return false;
                             }
                         }
-                        if (request.getFollowerId() != null) {
-                            if (t.getStaffs() == null || t.getStaffs().stream()
-                                    .noneMatch(s -> s.getId().equals(request.getFollowerId()))) {
-                                return false;
-                            }
-                        }
+
                         if (request.getStatusIds() != null && !request.getStatusIds().isEmpty()) {
                             if (t.getStatus() == null || !request.getStatusIds().contains(t.getStatus().getId())) {
                                 return false;
@@ -356,7 +356,7 @@ public class TaskServiceImpl implements TaskService {
                         if (request.getKeyword() != null && !request.getKeyword().isEmpty()) {
                             String kw = request.getKeyword().toLowerCase();
                             boolean nameMatch = t.getName() != null && t.getName().toLowerCase().contains(kw);
-                            boolean codeMatch = t.getCode() != null && String.valueOf(t.getCode()).contains(kw);
+                            boolean codeMatch = t.getCode() != null && t.getCode().toLowerCase().contains(kw);
                             if (!nameMatch && !codeMatch) {
                                 return false;
                             }
@@ -373,7 +373,7 @@ public class TaskServiceImpl implements TaskService {
                         } else if ("name".equals(request.getSortBy())) {
                             comp = t1.getName().compareToIgnoreCase(t2.getName());
                         } else if ("code".equals(request.getSortBy())) {
-                            comp = t1.getCode().compareTo(t2.getCode());
+                            comp = (t1.getCode() != null && t2.getCode() != null) ? t1.getCode().compareTo(t2.getCode()) : 0;
                         } else if ("priority".equals(request.getSortBy())) {
                             comp = t1.getPriority().compareTo(t2.getPriority());
                         }
@@ -401,7 +401,7 @@ public class TaskServiceImpl implements TaskService {
             TaskSearchRequest statusRequest = new TaskSearchRequest();
             statusRequest.setProjectId(projectId);
             statusRequest.setAssigneeId(request.getAssigneeId());
-            statusRequest.setFollowerId(request.getFollowerId());
+
             statusRequest.setActivityIds(request.getActivityIds());
             statusRequest.setPriorities(request.getPriorities());
             statusRequest.setKeyword(request.getKeyword());

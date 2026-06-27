@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface TaskHistoryRepository extends JpaRepository<TaskHistory, UUID> {
-    List<TaskHistory> findByTaskIdAndVoidedFalseOrderByCreateDateDesc(UUID taskId);
+    List<TaskHistory> findByTaskIdAndIsDeletedFalseOrderByCreateDateDesc(UUID taskId);
 }

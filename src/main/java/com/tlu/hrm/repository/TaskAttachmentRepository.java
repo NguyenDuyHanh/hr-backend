@@ -9,5 +9,5 @@ import java.util.UUID;
 
 @Repository
 public interface TaskAttachmentRepository extends JpaRepository<TaskAttachment, UUID> {
-    List<TaskAttachment> findByTaskIdAndVoidedFalse(UUID taskId);
+    List<TaskAttachment> findByTaskIdAndIsDeletedFalse(UUID taskId);
 }

@@ -23,8 +23,8 @@ public class CandidateDto {
     private String email;
     private String phoneNumber;
 
-    private String currentResidence;
-    private String cvFilePath;
+    private String address;
+    private String cvFileUrl;
     private CandidateStatus status;
     private String note;
 
@@ -40,7 +40,7 @@ public class CandidateDto {
 
 
 
-    private Integer onboardStatus;
+
 
     public CandidateDto(Candidate entity) {
         if (entity != null) {
@@ -53,10 +53,9 @@ public class CandidateDto {
             this.email = entity.getEmail();
             this.phoneNumber = entity.getPhoneNumber();
 
-            this.currentResidence = entity.getCurrentResidence();
-            this.cvFilePath = entity.getCvFilePath();
+            this.address = entity.getAddress();
+            this.cvFileUrl = entity.getCvFileUrl();
             this.status = entity.getStatus();
-            this.onboardStatus = entity.getOnboardStatus();
             this.note = entity.getNote();
 
             if (entity.getRecruitment() != null) {

@@ -77,7 +77,7 @@ public class PayrollController {
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
     public ResponseEntity<ApiResponse<Payroll>> confirmPayroll(@PathVariable UUID id) {
         Payroll result = payrollService.confirmPayroll(id);
-        return ResponseEntity.ok(ApiResponse.success("Duyệt và khóa bảng lương thành công", result));
+        return ResponseEntity.ok(ApiResponse.success("Xác nhận bảng lương thành công", result));
     }
 
     @DeleteMapping("/{id}")

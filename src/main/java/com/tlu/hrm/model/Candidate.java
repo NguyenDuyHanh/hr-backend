@@ -35,15 +35,16 @@ public class Candidate extends BaseModel {
     @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Column(name = "current_residence")
-    private String currentResidence;
+    @Column(name = "address")
+    private String address;
 
-    @Column(name = "cv_file_path")
-    private String cvFilePath;
+    @Column(name = "cv_file_url")
+    private String cvFileUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private CandidateStatus status; // SCREENING, INTERVIEW, QUALIFIED, WAITING, ONBOARDED, REJECTED
+    
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recruitment_id")
     private Recruitment recruitment;
@@ -55,9 +56,6 @@ public class Candidate extends BaseModel {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "position_id")
     private Position position;
-
-    @Column(name = "onboard_status")
-    private Integer onboardStatus = 0; // 0: Chưa onboard, 1: Đã onboard
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;

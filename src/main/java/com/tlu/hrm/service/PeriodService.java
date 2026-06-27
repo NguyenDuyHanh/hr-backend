@@ -13,5 +13,5 @@ public interface PeriodService {
     Period updatePeriod(UUID id, PeriodDto dto);
     List<Period> getAllPeriods();
     void deletePeriod(UUID periodId);
-    Page<Period> search(PeriodSearchRequest request);
+    Page<Period> getPeriods(PeriodSearchRequest request);
 }

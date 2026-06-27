@@ -17,7 +17,7 @@ public class TaskResponse {
     private String name;
     private String code;
     private String description;
-    private String comment;
+
     private Integer priority;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
@@ -38,7 +38,7 @@ public class TaskResponse {
     private UUID assigneeId;
     private String assigneeName;
     
-    private List<StaffTaskDto> followers = new ArrayList<>();
+
     private List<TaskAttachmentResponse> attachments = new ArrayList<>();
     
     private LocalDateTime createDate;
@@ -46,14 +46,7 @@ public class TaskResponse {
     private LocalDateTime modifyDate;
     private String modifiedBy;
 
-    @Getter
-    @Setter
-    public static class StaffTaskDto {
-        private UUID id;
-        private String staffCode;
-        private String displayName;
-        private String email;
-    }
+
 
     public TaskResponse() {}
 
@@ -62,16 +55,10 @@ public class TaskResponse {
             this.id = entity.getId();
             this.name = entity.getName();
             
-            if (entity.getProject() != null && entity.getProject().getCode() != null && entity.getCode() != null) {
-                this.code = entity.getProject().getCode() + "#" + entity.getCode();
-            } else if (entity.getCode() != null) {
-                this.code = entity.getCode().toString();
-            } else {
-                this.code = null;
-            }
+            this.code = entity.getCode();
             
             this.description = entity.getDescription();
-            this.comment = entity.getComment();
+
             this.priority = entity.getPriority();
             this.startTime = entity.getStartTime();
             this.endTime = entity.getEndTime();
@@ -104,22 +91,11 @@ public class TaskResponse {
                 this.assigneeName = entity.getAssignee().getDisplayName();
             }
 
-            if (entity.getStaffs() != null) {
-                this.followers = entity.getStaffs().stream()
-                        .map(s -> {
-                            StaffTaskDto dto = new StaffTaskDto();
-                            dto.setId(s.getId());
-                            dto.setStaffCode(s.getStaffCode());
-                            dto.setDisplayName(s.getDisplayName());
-                            dto.setEmail(s.getEmail());
-                            return dto;
-                        })
-                        .collect(Collectors.toList());
-            }
+
 
             if (entity.getAttachments() != null) {
                 this.attachments = entity.getAttachments().stream()
-                        .filter(a -> a.getVoided() == null || !a.getVoided())
+                        .filter(a -> a.getIsDeleted() == null || !a.getIsDeleted())
                         .map(TaskAttachmentResponse::new)
                         .collect(Collectors.toList());
             }

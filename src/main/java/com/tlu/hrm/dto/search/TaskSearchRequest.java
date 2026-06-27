@@ -15,7 +15,6 @@ public class TaskSearchRequest {
     private String keyword;
     private UUID projectId;
     private UUID assigneeId;
-    private UUID followerId;
     private List<UUID> statusIds;
     private List<UUID> activityIds;
     private List<Integer> priorities;

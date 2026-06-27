@@ -54,8 +54,8 @@ public class PeriodController {
 
     @PostMapping("/paging")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "', '" + HR_EMPLOYEE + "')")
-    public ResponseEntity<ApiResponse<Page<Period>>> search(@RequestBody PeriodSearchRequest request) {
-        Page<Period> result = periodService.search(request);
+    public ResponseEntity<ApiResponse<Page<Period>>> getPeriods(@RequestBody PeriodSearchRequest request) {
+        Page<Period> result = periodService.getPeriods(request);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách kỳ lương thành công", result));
     }
 }

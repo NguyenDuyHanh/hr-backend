@@ -32,12 +32,21 @@ public class SalaryItemServiceImpl implements SalaryItemService {
     @Override
     public List<SalaryItem> getAllSalaryItems() {
         return salaryItemRepository.findAll().stream()
-                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
                 .collect(Collectors.toList());
     }
 
     @Override
     public SalaryItem saveSalaryItem(SalaryItem item) {
+        if (item.getCode() != null) {
+            String finalCode = item.getCode().trim().toUpperCase();
+            java.util.Optional<SalaryItem> existing = salaryItemRepository.findActiveByCode(finalCode);
+            if (existing.isPresent() && (item.getId() == null || !existing.get().getId().equals(item.getId()))) {
+                throw new IllegalArgumentException("Mã khoản lương '" + finalCode + "' đã tồn tại");
+            }
+            item.setCode(finalCode);
+        }
+
         if (item.getId() != null) {
             SalaryItem existing = salaryItemRepository.findById(item.getId())
                     .orElseThrow(() -> new IllegalArgumentException("Khoản lương không tồn tại"));
@@ -55,14 +64,14 @@ public class SalaryItemServiceImpl implements SalaryItemService {
     public void deleteSalaryItem(UUID id) {
         SalaryItem item = salaryItemRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Khoản lương không tồn tại"));
-        item.setVoided(true);
+        item.setIsDeleted(true);
         salaryItemRepository.save(item);
     }
 
     @Override
     public List<StaffSalaryItem> getStaffSalaryItems(UUID staffId) {
         return staffSalaryItemRepository.findByStaffId(staffId).stream()
-                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
                 .collect(Collectors.toList());
     }
 
@@ -73,10 +82,10 @@ public class SalaryItemServiceImpl implements SalaryItemService {
                 .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại"));
 
         List<StaffSalaryItem> oldItems = staffSalaryItemRepository.findByStaffId(staffId).stream()
-                .filter(item -> item.getVoided() == null || !item.getVoided())
+                .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
                 .collect(Collectors.toList());
         for (StaffSalaryItem oldItem : oldItems) {
-            oldItem.setVoided(true);
+            oldItem.setIsDeleted(true);
         }
         staffSalaryItemRepository.saveAll(oldItems);
 

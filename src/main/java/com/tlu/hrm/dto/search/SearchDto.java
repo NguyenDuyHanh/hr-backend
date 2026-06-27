@@ -16,7 +16,7 @@ public class SearchDto implements Serializable {
     private int pageIndex;
     private int pageSize;
     private String keyword;
-    private Boolean voided;
+    private Boolean isDeleted;
     private String orderBy;
     private String extWhereClause;
     private String orderByDesc;

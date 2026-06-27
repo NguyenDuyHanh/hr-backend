@@ -39,7 +39,7 @@ public class ProjectResponse {
             this.createdBy = entity.getCreatedBy();
             if (entity.getProjectStaffs() != null) {
                 this.staffs = entity.getProjectStaffs().stream()
-                        .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                        .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                         .map(ProjectStaffDto::new)
                         .collect(Collectors.toList());
             }

@@ -38,7 +38,7 @@ public class ProjectUtils {
             return false;
         }
         Project project = projectRepository.findById(projectId)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElse(null);
         if (project == null) {
             return false;
@@ -48,7 +48,7 @@ public class ProjectUtils {
             return false;
         }
         return project.getProjectStaffs().stream()
-                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                 .anyMatch(ps -> ps.getStaff() != null
                         && ps.getStaff().getId().equals(staff.getId())
                         && ProjectRole.MANAGER.equals(ps.getProjectRole()));
@@ -68,7 +68,7 @@ public class ProjectUtils {
             return false;
         }
         Project project = projectRepository.findById(projectId)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElse(null);
         if (project == null) {
             return false;
@@ -78,7 +78,7 @@ public class ProjectUtils {
             return false;
         }
         return project.getProjectStaffs().stream()
-                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                 .anyMatch(ps -> ps.getStaff() != null
                         && ps.getStaff().getId().equals(staff.getId()));
     }
@@ -92,7 +92,7 @@ public class ProjectUtils {
             return false;
         }
         Task task = taskRepository.findById(taskId)
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .orElse(null);
         if (task == null || task.getProject() == null) {
             return false;
@@ -110,7 +110,7 @@ public class ProjectUtils {
             return false;
         }
         Task task = taskRepository.findById(taskId)
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .orElse(null);
         if (task == null || task.getProject() == null) {
             return false;

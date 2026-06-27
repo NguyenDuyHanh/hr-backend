@@ -21,7 +21,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new UsernameNotFoundException("Không tìm thấy người dùng với username: " + username));
         
-        if (user.getVoided() != null && user.getVoided()) {
+        if (user.getIsDeleted() != null && user.getIsDeleted()) {
             throw new UsernameNotFoundException("Tài khoản đã bị xóa: " + username);
         }
 
