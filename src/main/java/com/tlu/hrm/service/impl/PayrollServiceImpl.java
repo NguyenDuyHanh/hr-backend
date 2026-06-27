@@ -45,12 +45,20 @@ public class PayrollServiceImpl implements PayrollService {
 
         Payroll payroll = new Payroll();
         payroll.setName(name);
-        payroll.setPayrollPeriod(period);
+        payroll.setPeriod(period);
+        String finalCode;
         if (code == null || code.trim().isEmpty()) {
-            payroll.setCode(generatePayrollCode(name));
+            finalCode = generatePayrollCode(name);
         } else {
-            payroll.setCode(code.toUpperCase().trim());
+            finalCode = code.toUpperCase().trim();
         }
+
+        java.util.Optional<Payroll> existing = payrollRepository.findActiveByCode(finalCode);
+        if (existing.isPresent()) {
+            throw new IllegalArgumentException("Mã bảng lương '" + finalCode + "' đã tồn tại");
+        }
+
+        payroll.setCode(finalCode);
         payroll.setDescription(description);
         payroll.setStatus(PayrollStatus.DRAFT);
         payroll = payrollRepository.save(payroll);
@@ -79,15 +87,15 @@ public class PayrollServiceImpl implements PayrollService {
 
     @Override
     public List<Payroll> getPayrollsByPeriod(UUID periodId) {
-        return payrollRepository.findByPayrollPeriodId(periodId).stream()
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+        return payrollRepository.findByPeriodId(periodId).stream()
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .collect(Collectors.toList());
     }
 
     @Override
     public List<Payroll> getAllPayrolls() {
         return payrollRepository.findAll().stream()
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .collect(Collectors.toList());
     }
 
@@ -97,14 +105,14 @@ public class PayrollServiceImpl implements PayrollService {
                 .orElseThrow(() -> new IllegalArgumentException("Bảng lương không tồn tại"));
 
         if (payroll.getStatus() != PayrollStatus.DRAFT) {
-            throw new IllegalStateException("Bảng lương đã được khóa, không thể tính toán lại.");
+            throw new IllegalStateException("Bảng lương đã được xác nhận, không thể tính toán lại.");
         }
 
         // 1. Xóa kết quả tính toán cũ của bảng lương này
         payslipRepository.deleteByPayrollId(payrollId);
 
         // 2. Xác định ngày bắt đầu và kết thúc từ kỳ lương
-        Period period = payroll.getPayrollPeriod();
+        Period period = payroll.getPeriod();
         if (period == null) {
             throw new IllegalArgumentException("Kỳ lương không tồn tại");
         }
@@ -131,7 +139,8 @@ public class PayrollServiceImpl implements PayrollService {
             }
 
             // Gọi PayslipService để tính toán chi tiết phiếu lương cho nhân viên này
-            Payslip payslip = payslipService.calculateStaffPayslip(staff, payroll, start, end, standardWorkDays, staffSalaryItems);
+            Payslip payslip = payslipService.calculateStaffPayslip(staff, payroll, start, end, standardWorkDays,
+                    staffSalaryItems);
             payslips.add(payslip);
         }
 
@@ -142,7 +151,7 @@ public class PayrollServiceImpl implements PayrollService {
     public List<Payslip> getPayrollDetails(UUID payrollId) {
         Specification<Payslip> spec = (root, query, cb) -> cb.and(
                 cb.equal(root.get("payroll").get("id"), payrollId),
-                cb.or(cb.isNull(root.get("voided")), cb.equal(root.get("voided"), false)));
+                cb.or(cb.isNull(root.get("isDeleted")), cb.equal(root.get("isDeleted"), false)));
         return payslipRepository.findAll(spec);
     }
 
@@ -159,12 +168,15 @@ public class PayrollServiceImpl implements PayrollService {
     public void deletePayroll(UUID payrollId) {
         Payroll payroll = payrollRepository.findById(payrollId)
                 .orElseThrow(() -> new IllegalArgumentException("Bảng lương không tồn tại"));
-        payroll.setVoided(true);
+        if (payroll.getStatus() != PayrollStatus.DRAFT) {
+            throw new IllegalArgumentException("Không thể xóa bảng lương đã xác nhận");
+        }
+        payroll.setIsDeleted(true);
         payrollRepository.save(payroll);
 
         List<Payslip> payslips = payslipRepository.findByPayrollId(payrollId);
         for (Payslip payslip : payslips) {
-            payslip.setVoided(true);
+            payslip.setIsDeleted(true);
         }
         payslipRepository.saveAll(payslips);
     }
@@ -175,9 +187,9 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalArgumentException("Người dùng hiện tại chưa liên kết với nhân viên nào");
         }
         return payslipRepository
-                .findByStaffIdAndPayrollPayrollPeriodIdAndPayrollStatus(currentUser.getStaff().getId(), periodId,
+                .findByStaffIdAndPayrollPeriodIdAndPayrollStatus(currentUser.getStaff().getId(), periodId,
                         PayrollStatus.CONFIRMED)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu lương đã khóa cho kỳ lương này"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu lương đã xác nhận cho kỳ lương này"));
     }
 
     @Override

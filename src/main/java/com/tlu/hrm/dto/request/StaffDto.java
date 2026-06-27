@@ -21,11 +21,9 @@ public class StaffDto {
     private String email;
     private String workingStatus;
     private String idNumber;
-    private LocalDate recruitmentDate;
     private LocalDate startDate;
     private String currentAddress;
     private String socialInsuranceCode;
-    private String level;
     
     // IDs for linked entities
     private UUID departmentId;
@@ -34,60 +32,24 @@ public class StaffDto {
     private String positionName;
 
     // --- Expanded general_info_fields.md fields ---
-    private String imagePath;
-    private String maritalStatus;
+    private String avatarUrl;
     private String birthPlace;
-    private String nationalityId;
-    private String ethnicsId;
-    private String religionId;
-    private String educationDegreeId;
+    private String nationality;
+    private String ethnics;
+    private String religion;
+    private String educationDegree;
 
-    private String provinceId;
-    private String administrativeunitId;
+    private String province;
+    private String commune;
     private String permanentResidence;
     private String currentResidence;
-    private String homeTown;
 
     private LocalDate idNumberIssueDate;
     private String idNumberIssueBy;
-    private String personalIdentificationNumber;
-    private LocalDate personalIdentificationIssueDate;
-    private String personalIdentificationIssuePlace;
-    private String passportNumber;
-    private String workPermitNumber;
-
-    private String statusId;
-    private String staffWorkingFormat;
-    private String introducerId;
-    private String recruiterId;
-    private Integer apprenticeDays;
     private String companyEmail;
-    private String staffPhase;
-    private String staffPositionType;
-    private String healthCareRegistrationPlaceId;
-    private String staffWorkShiftType;
-    private String fixShiftWorkId;
-    private String staffLeaveShiftType;
-    private String fixLeaveWeekDay;
-    private String fixLeaveWeekDay2;
-
-    private Boolean skipTimekeeping;
-    private Boolean skipLateEarlyCount;
-    private Boolean skipOvertimeCount;
-    private Boolean onBlacklist;
-    private Boolean hasSocialIns;
-    private Boolean unemploymentDeclaration;
-    private Boolean allowExternalIpTimekeeping;
-
-    private String organizationId;
-    private String positionTitleId;
-
-    private String contactPersonInfo;
 
     private String taxCode;
-    private String socialInsuranceNumber;
     private String healthInsuranceNumber;
-    private String socialInsuranceNote;
 
     private String bankName;
     private String bankAccountNumber;
@@ -105,11 +67,9 @@ public class StaffDto {
             this.email = entity.getEmail();
             this.workingStatus = entity.getWorkingStatus();
             this.idNumber = entity.getIdNumber();
-            this.recruitmentDate = entity.getRecruitmentDate();
             this.startDate = entity.getStartDate();
             this.currentAddress = entity.getCurrentAddress();
             this.socialInsuranceCode = entity.getSocialInsuranceCode();
-            this.level = entity.getLevel();
             if (entity.getDepartment() != null) {
                 this.departmentId = entity.getDepartment().getId();
                 this.departmentName = entity.getDepartment().getName();
@@ -120,53 +80,21 @@ public class StaffDto {
             }
             
             // Map expanded fields
-            this.imagePath = entity.getImagePath();
-            this.maritalStatus = entity.getMaritalStatus();
+            this.avatarUrl = entity.getAvatarUrl();
             this.birthPlace = entity.getBirthPlace();
-            this.nationalityId = entity.getNationalityId();
-            this.ethnicsId = entity.getEthnicsId();
-            this.religionId = entity.getReligionId();
-            this.educationDegreeId = entity.getEducationDegreeId();
-            this.provinceId = entity.getProvinceId();
-            this.administrativeunitId = entity.getAdministrativeunitId();
+            this.nationality = entity.getNationality();
+            this.ethnics = entity.getEthnics();
+            this.religion = entity.getReligion();
+            this.educationDegree = entity.getEducationDegree();
+            this.province = entity.getProvince();
+            this.commune = entity.getCommune();
             this.permanentResidence = entity.getPermanentResidence();
             this.currentResidence = entity.getCurrentResidence();
-            this.homeTown = entity.getHomeTown();
             this.idNumberIssueDate = entity.getIdNumberIssueDate();
             this.idNumberIssueBy = entity.getIdNumberIssueBy();
-            this.personalIdentificationNumber = entity.getPersonalIdentificationNumber();
-            this.personalIdentificationIssueDate = entity.getPersonalIdentificationIssueDate();
-            this.personalIdentificationIssuePlace = entity.getPersonalIdentificationIssuePlace();
-            this.passportNumber = entity.getPassportNumber();
-            this.workPermitNumber = entity.getWorkPermitNumber();
-            this.statusId = entity.getStatusId();
-            this.staffWorkingFormat = entity.getStaffWorkingFormat();
-            this.introducerId = entity.getIntroducerId();
-            this.recruiterId = entity.getRecruiterId();
-            this.apprenticeDays = entity.getApprenticeDays();
             this.companyEmail = entity.getCompanyEmail();
-            this.staffPhase = entity.getStaffPhase();
-            this.staffPositionType = entity.getStaffPositionType();
-            this.healthCareRegistrationPlaceId = entity.getHealthCareRegistrationPlaceId();
-            this.staffWorkShiftType = entity.getStaffWorkShiftType();
-            this.fixShiftWorkId = entity.getFixShiftWorkId();
-            this.staffLeaveShiftType = entity.getStaffLeaveShiftType();
-            this.fixLeaveWeekDay = entity.getFixLeaveWeekDay();
-            this.fixLeaveWeekDay2 = entity.getFixLeaveWeekDay2();
-            this.skipTimekeeping = entity.getSkipTimekeeping();
-            this.skipLateEarlyCount = entity.getSkipLateEarlyCount();
-            this.skipOvertimeCount = entity.getSkipOvertimeCount();
-            this.onBlacklist = entity.getOnBlacklist();
-            this.hasSocialIns = entity.getHasSocialIns();
-            this.unemploymentDeclaration = entity.getUnemploymentDeclaration();
-            this.allowExternalIpTimekeeping = entity.getAllowExternalIpTimekeeping();
-            this.organizationId = entity.getOrganizationId();
-            this.positionTitleId = entity.getPositionTitleId();
-            this.contactPersonInfo = entity.getContactPersonInfo();
             this.taxCode = entity.getTaxCode();
-            this.socialInsuranceNumber = entity.getSocialInsuranceNumber();
             this.healthInsuranceNumber = entity.getHealthInsuranceNumber();
-            this.socialInsuranceNote = entity.getSocialInsuranceNote();
             this.bankName = entity.getBankName();
             this.bankAccountNumber = entity.getBankAccountNumber();
             this.bankAccountName = entity.getBankAccountName();

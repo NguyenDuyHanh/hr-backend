@@ -80,7 +80,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 predicates.add(cb.or(codeLike, nameLike));
             }
 
-            predicates.add(cb.or(cb.isNull(root.get("voided")), cb.equal(root.get("voided"), false)));
+            predicates.add(cb.or(cb.isNull(root.get("isDeleted")), cb.equal(root.get("isDeleted"), false)));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -99,7 +99,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     @Override
     public LeaveRequestDto getById(UUID id) {
         return leaveRequestRepository.findById(id)
-                .filter(entity -> entity.getVoided() == null || !entity.getVoided())
+                .filter(entity -> entity.getIsDeleted() == null || !entity.getIsDeleted())
                 .map(LeaveRequestDto::new)
                 .orElse(null);
     }
@@ -157,7 +157,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         // Đơn đã duyệt mà bị xóa (hoặc hủy) cần cập nhật lại Timesheet
         LeaveApprovalStatus oldStatus = entity.getApprovalStatus();
         
-        entity.setVoided(true);
+        entity.setIsDeleted(true);
         leaveRequestRepository.save(entity);
 
         if (oldStatus == LeaveApprovalStatus.APPROVED) {
@@ -213,7 +213,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         Staff staff = staffRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên"));
 
-        Double limit = staff.getAnnualLeaveLimit();
+        Double limit = staff.getAnnualLeave();
         if (limit == null) {
             limit = 12.0;
         }
@@ -231,7 +231,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 .departmentName(deptName)
                 .positionName(positionName)
                 .year(year)
-                .annualLeaveLimit(limit)
+                .annualLeave(limit)
                 .usedDays(used)
                 .remainingDays(remaining)
                 .build();
@@ -250,26 +250,17 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         entity.setRequestReason(dto.getRequestReason());
         
         entity.setHalfDayLeave(dto.getHalfDayLeave() != null ? dto.getHalfDayLeave() : false);
-        entity.setHalfDayLeaveStart(dto.getHalfDayLeaveStart() != null ? dto.getHalfDayLeaveStart() : false);
-        entity.setHalfDayLeaveEnd(dto.getHalfDayLeaveEnd() != null ? dto.getHalfDayLeaveEnd() : false);
 
-        if (dto.getShiftWorkStartId() != null) {
-            shiftWorkRepository.findById(dto.getShiftWorkStartId()).ifPresent(entity::setShiftWorkStart);
+        if (dto.getShiftWorkId() != null) {
+            shiftWorkRepository.findById(dto.getShiftWorkId()).ifPresent(entity::setShiftWork);
         } else {
-            entity.setShiftWorkStart(null);
-        }
-
-        if (dto.getShiftWorkEndId() != null) {
-            shiftWorkRepository.findById(dto.getShiftWorkEndId()).ifPresent(entity::setShiftWorkEnd);
-        } else {
-            entity.setShiftWorkEnd(null);
+            entity.setShiftWork(null);
         }
     }
 
     private void calculateDaysAndHours(LeaveRequest request) {
         if (request.getFromDate() == null || request.getToDate() == null) {
             request.setTotalDays(0.0);
-            request.setTotalHours(0.0);
             return;
         }
 
@@ -285,20 +276,13 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             }
 
             double dayValue = 1.0;
-            if (request.getHalfDayLeave() != null && request.getHalfDayLeave()) {
-                if (start.equals(end)) {
-                    dayValue = 0.5;
-                } else if (request.getHalfDayLeaveStart() != null && request.getHalfDayLeaveStart() && date.equals(start)) {
-                    dayValue = 0.5;
-                } else if (request.getHalfDayLeaveEnd() != null && request.getHalfDayLeaveEnd() && date.equals(end)) {
-                    dayValue = 0.5;
-                }
+            if (request.getHalfDayLeave() != null && request.getHalfDayLeave() && start.equals(end)) {
+                dayValue = 0.5;
             }
             totalDays += dayValue;
         }
 
         request.setTotalDays(totalDays);
-        request.setTotalHours(totalDays * 8.0); // Mặc định 8 tiếng/ngày công chuẩn
     }
 
     private void validateOverlap(LeaveRequest request) {
@@ -316,7 +300,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     private void validateLeaveBalanceLimit(LeaveRequest request) {
         int year = request.getFromDate().getYear();
         Double used = leaveRequestRepository.calculateUsedAnnualLeave(request.getRequestStaff().getId(), year);
-        Double limit = request.getRequestStaff().getAnnualLeaveLimit();
+        Double limit = request.getRequestStaff().getAnnualLeave();
         if (limit == null) {
             limit = 12.0;
         }
@@ -352,7 +336,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     @Override
     public Page<StaffAnnualLeaveBalanceDto> getLeaveBalances(com.tlu.hrm.dto.search.SearchDto searchDto, int year) {
         List<Staff> filteredList = staffRepository.findAll().stream()
-                .filter(staff -> staff.getVoided() == null || !staff.getVoided())
+                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
                 .filter(staff -> {
                     if (searchDto != null) {
                         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
@@ -393,7 +377,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         List<StaffAnnualLeaveBalanceDto> pageContent = new ArrayList<>();
         if (fromIndex < total) {
             for (Staff staff : filteredList.subList(fromIndex, toIndex)) {
-                Double limit = staff.getAnnualLeaveLimit();
+                Double limit = staff.getAnnualLeave();
                 if (limit == null) {
                     limit = 12.0;
                 }
@@ -409,7 +393,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                         .departmentName(deptName)
                         .positionName(positionName)
                         .year(year)
-                        .annualLeaveLimit(limit)
+                        .annualLeave(limit)
                         .usedDays(used)
                         .remainingDays(remaining)
                         .build());

@@ -106,9 +106,8 @@ public class DatabaseInitializer implements CommandLineRunner {
         User admin = new User();
         admin.setUsername(adminUsername);
         admin.setPassword(passwordEncoder.encode(adminPassword)); // Encrypted default password
-        admin.setEmail(adminEmail);
         admin.setActive(true);
-        admin.setVoided(false);
+        admin.setIsDeleted(false);
         admin.setUserRoles(new HashSet<>());
 
         UserRole userRole = new UserRole();
@@ -125,7 +124,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             Role role = new Role();
             role.setName(name);
             role.setDescription(description);
-            role.setVoided(false);
+            role.setIsDeleted(false);
             Role saved = roleRepository.save(role);
             System.out.println("Role " + name + " seeded successfully.");
             return saved;
@@ -161,7 +160,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                                 });
                         dept.setName(name);
                         dept.setDescription(description);
-                        dept.setVoided(false);
+                        dept.setIsDeleted(false);
                         departmentRepository.save(dept);
                         System.out.println("Department " + name + " (" + code + ") seeded successfully.");
                     }
@@ -200,7 +199,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                                 });
                         pos.setName(name);
                         pos.setDescription(description);
-                        pos.setVoided(false);
+                        pos.setIsDeleted(false);
 
                         if (!deptCode.isEmpty()) {
                             departmentRepository.findByCode(deptCode).ifPresent(pos::setDepartment);

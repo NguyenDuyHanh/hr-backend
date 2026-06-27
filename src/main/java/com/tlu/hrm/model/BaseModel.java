@@ -43,9 +43,9 @@ public abstract class BaseModel {
     private String modifiedBy;
 
     @Column(
-        name = "voided"
+        name = "is_deleted"
     )
-    private Boolean voided = false;
+    private Boolean isDeleted = false;
 
     @PrePersist
     protected void onCreate() {
@@ -60,8 +60,8 @@ public abstract class BaseModel {
             this.modifiedBy = currentUser;
         }
         
-        if (this.voided == null) {
-            this.voided = false;
+        if (this.isDeleted == null) {
+            this.isDeleted = false;
         }
     }
 

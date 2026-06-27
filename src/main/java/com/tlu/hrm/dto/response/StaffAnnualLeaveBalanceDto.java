@@ -18,7 +18,7 @@ public class StaffAnnualLeaveBalanceDto {
     private String departmentName;
     private String positionName;
     private Integer year;
-    private Double annualLeaveLimit;
+    private Double annualLeave;
     private Double usedDays;
     private Double remainingDays;
 }

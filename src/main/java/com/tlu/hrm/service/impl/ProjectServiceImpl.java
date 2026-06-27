@@ -48,7 +48,7 @@ public class ProjectServiceImpl implements ProjectService {
         Staff currentStaff = (currentUser != null) ? currentUser.getStaff() : null;
 
         List<Project> filteredList = projectRepository.findAll().stream()
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .filter(p -> {
                     // Phân quyền: Employee chỉ xem được dự án họ tham gia
                     if (!isManager) {
@@ -56,7 +56,7 @@ public class ProjectServiceImpl implements ProjectService {
                             return false;
                         }
                         boolean isMember = p.getProjectStaffs().stream()
-                                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                                 .anyMatch(ps -> ps.getStaff() != null
                                         && ps.getStaff().getId().equals(currentStaff.getId()));
                         if (!isMember) {
@@ -96,7 +96,7 @@ public class ProjectServiceImpl implements ProjectService {
                         // 5. Lọc theo một nhân viên cụ thể
                         if (request.getStaffId() != null) {
                             boolean hasStaff = p.getProjectStaffs().stream()
-                                    .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                    .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                                     .anyMatch(ps -> ps.getStaff() != null
                                             && ps.getStaff().getId().equals(request.getStaffId()));
                             if (!hasStaff)
@@ -136,14 +136,14 @@ public class ProjectServiceImpl implements ProjectService {
         Staff currentStaff = (currentUser != null) ? currentUser.getStaff() : null;
 
         return projectRepository.findAll().stream()
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .filter(p -> {
                     if (!isManager) {
                         if (currentStaff == null) {
                             return false;
                         }
                         boolean isMember = p.getProjectStaffs().stream()
-                                .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                                .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                                 .anyMatch(ps -> ps.getStaff() != null
                                         && ps.getStaff().getId().equals(currentStaff.getId()));
                         if (!isMember) {
@@ -159,13 +159,21 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public ProjectResponse getProjectById(UUID id) {
         Project project = projectRepository.findById(id)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + id));
         return new ProjectResponse(project);
     }
 
     @Override
     public ProjectResponse saveProject(ProjectCreateRequest request) {
+        if (request.getCode() != null) {
+            String finalCode = request.getCode().trim().toUpperCase();
+            java.util.Optional<Project> existing = projectRepository.findActiveByCode(finalCode);
+            if (existing.isPresent() && (request.getId() == null || !existing.get().getId().equals(request.getId()))) {
+                throw new IllegalArgumentException("Mã dự án '" + finalCode + "' đã tồn tại");
+            }
+        }
+
         Project project;
         if (request.getId() != null) {
             project = projectRepository.findById(request.getId())
@@ -177,7 +185,11 @@ public class ProjectServiceImpl implements ProjectService {
         }
 
         project.setName(request.getName());
-        project.setCode(request.getCode());
+        if (request.getCode() != null) {
+            project.setCode(request.getCode().trim().toUpperCase());
+        } else {
+            project.setCode(null);
+        }
         project.setDescription(request.getDescription());
         project.setStartDate(request.getStartDate() != null ? request.getStartDate() : LocalDate.now());
         project.setEndDate(request.getEndDate());
@@ -186,10 +198,10 @@ public class ProjectServiceImpl implements ProjectService {
 
         // Lưu thành viên dự án nếu được truyền lên
         if (request.getStaffs() != null) {
-            // Đánh dấu các thành viên cũ là voided
+            // Đánh dấu các thành viên cũ là isDeleted
             List<ProjectStaff> oldMembers = projectStaffRepository.findByProjectId(saved.getId());
             for (ProjectStaff om : oldMembers) {
-                om.setVoided(true);
+                om.setIsDeleted(true);
                 projectStaffRepository.save(om);
             }
 
@@ -209,7 +221,7 @@ public class ProjectServiceImpl implements ProjectService {
                     member.setStaff(staff);
                     member.setProjectRole(pmReq.getProjectRole() != null ? pmReq.getProjectRole() : ProjectRole.MEMBER);
                     member.setJoinedDate(pmReq.getJoinedDate() != null ? pmReq.getJoinedDate() : LocalDate.now());
-                    member.setVoided(false);
+                    member.setIsDeleted(false);
                     projectStaffRepository.save(member);
                 }
             }
@@ -235,7 +247,7 @@ public class ProjectServiceImpl implements ProjectService {
                 ws.setCode(ds[1]);
                 ws.setColor(ds[2]);
                 ws.setDisplayOrder(Integer.parseInt(ds[3]));
-                ws.setVoided(false);
+                ws.setIsDeleted(false);
                 projectWorkingStatusRepository.save(ws);
             }
         }
@@ -247,7 +259,7 @@ public class ProjectServiceImpl implements ProjectService {
     public void deleteProject(UUID id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + id));
-        project.setVoided(true);
+        project.setIsDeleted(true);
         projectRepository.save(project);
     }
 
@@ -272,7 +284,7 @@ public class ProjectServiceImpl implements ProjectService {
     @Override
     public List<StaffDto> getProjectStaffs(UUID projectId) {
         Project project = projectRepository.findById(projectId)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + projectId));
 
         User currentUser = securityUtils.getCurrentUser();
@@ -286,7 +298,7 @@ public class ProjectServiceImpl implements ProjectService {
         boolean isProjectManager = false;
         if (currentStaff != null) {
             isProjectManager = project.getProjectStaffs().stream()
-                    .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                    .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                     .anyMatch(ps -> ps.getStaff() != null 
                             && ps.getStaff().getId().equals(currentStaff.getId()) 
                             && ps.getProjectRole() == ProjectRole.MANAGER);
@@ -294,7 +306,7 @@ public class ProjectServiceImpl implements ProjectService {
 
         if (isSystemManager || isProjectManager) {
             return project.getProjectStaffs().stream()
-                    .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                    .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                     .map(ps -> ps.getStaff() != null ? new StaffDto(ps.getStaff()) : null)
                     .filter(Objects::nonNull)
                     .collect(Collectors.toList());
@@ -302,7 +314,7 @@ public class ProjectServiceImpl implements ProjectService {
             List<StaffDto> staffs = new ArrayList<>();
             if (currentStaff != null) {
                 boolean isMemberOfProject = project.getProjectStaffs().stream()
-                        .filter(ps -> ps.getVoided() == null || !ps.getVoided())
+                        .filter(ps -> ps.getIsDeleted() == null || !ps.getIsDeleted())
                         .anyMatch(ps -> ps.getStaff() != null 
                                 && ps.getStaff().getId().equals(currentStaff.getId()));
                 if (isMemberOfProject) {

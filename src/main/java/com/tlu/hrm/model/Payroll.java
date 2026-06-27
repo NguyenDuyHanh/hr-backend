@@ -15,15 +15,15 @@ import lombok.Setter;
 @AllArgsConstructor
 public class Payroll extends BaseModel {
 
-    @Column(name = "code", unique = true)
+    @Column(name = "code")
     private String code;
 
     @Column(name = "name", nullable = false)
     private String name;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "payroll_period_id", nullable = false)
-    private Period payrollPeriod;
+    @JoinColumn(name = "period_id", nullable = false)
+    private Period period;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)

@@ -15,7 +15,10 @@ import java.util.UUID;
 public interface PeriodRepository extends JpaRepository<Period, UUID>, JpaSpecificationExecutor<Period> {
     Optional<Period> findByCode(String code);
 
-    @Query("SELECT p FROM Period p WHERE :date BETWEEN p.fromDate AND p.toDate AND (p.voided = false OR p.voided IS NULL)")
+    @Query("SELECT p FROM Period p WHERE (p.isDeleted IS NULL OR p.isDeleted = false) AND p.code = :code")
+    Optional<Period> findActiveByCode(@Param("code") String code);
+
+    @Query("SELECT p FROM Period p WHERE :date BETWEEN p.fromDate AND p.toDate AND (p.isDeleted = false OR p.isDeleted IS NULL)")
     Optional<Period> findPeriodContainingDate(@Param("date") LocalDate date);
 }
 

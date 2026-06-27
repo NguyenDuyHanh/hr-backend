@@ -33,7 +33,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
     @Override
     public Page<RecruitmentDto> pagingRecruitment(SearchRecruitmentDto searchDto) {
         List<Recruitment> list = recruitmentRepository.findAll().stream()
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .filter(p -> {
                     if (searchDto != null) {
                         // General Keyword Filter (search code, name, description)
@@ -63,10 +63,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
 
                         // Status Filter (checked against Enum values)
                         if (searchDto.getStatus() != null) {
-                            RecruitmentStatus enumStatus = RecruitmentStatus.fromValue(searchDto.getStatus());
-                            if (enumStatus != null && !Integer.valueOf(enumStatus.getValue()).equals(p.getStatus())) {
-                                return false;
-                            } else if (enumStatus == null && !searchDto.getStatus().equals(p.getStatus())) {
+                            if (p.getStatus() != searchDto.getStatus()) {
                                 return false;
                             }
                         }
@@ -113,7 +110,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
     @Override
     public RecruitmentDto getById(UUID id) {
         Recruitment entity = recruitmentRepository.findById(id)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng với ID: " + id));
         return new RecruitmentDto(entity);
     }
@@ -136,7 +133,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
         entity.setName(dto.getName());
         entity.setDescription(dto.getDescription());
         // Default to RECRUITING (1) if status is not specified
-        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : RecruitmentStatus.RECRUITING.getValue());
+        entity.setStatus(dto.getStatus() != null ? dto.getStatus() : RecruitmentStatus.RECRUITING);
 
         if (dto.getPersonApproveCVId() != null) {
             Staff reviewer = staffRepository.findById(dto.getPersonApproveCVId())
@@ -154,7 +151,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
     public void deleteRecruitment(UUID id) {
         Recruitment entity = recruitmentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy tin tuyển dụng với ID: " + id));
-        entity.setVoided(true);
+        entity.setIsDeleted(true);
         recruitmentRepository.save(entity);
     }
 
@@ -163,7 +160,7 @@ public class RecruitmentServiceImpl implements RecruitmentService {
         if (ids != null) {
             for (UUID id : ids) {
                 recruitmentRepository.findById(id).ifPresent(entity -> {
-                    entity.setVoided(true);
+                    entity.setIsDeleted(true);
                     recruitmentRepository.save(entity);
                 });
             }

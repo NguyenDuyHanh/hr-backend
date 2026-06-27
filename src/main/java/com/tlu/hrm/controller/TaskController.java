@@ -122,7 +122,7 @@ public class TaskController {
             @PathVariable UUID id,
             @RequestParam("file") MultipartFile file) throws IOException {
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc với ID: " + id));
 
         // Lưu file vật lý
@@ -147,7 +147,7 @@ public class TaskController {
         attachment.setName(originalFilename);
         attachment.setSize(file.getSize());
         attachment.setFilePath(filePath);
-        attachment.setVoided(false);
+        attachment.setIsDeleted(false);
 
         TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
         return ResponseEntity
@@ -162,7 +162,7 @@ public class TaskController {
             @RequestParam("size") Long size,
             @RequestParam("filePath") String filePath) {
         Task task = taskRepository.findById(id)
-                .filter(t -> t.getVoided() == null || !t.getVoided())
+                .filter(t -> t.getIsDeleted() == null || !t.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy công việc với ID: " + id));
 
         TaskAttachment attachment = new TaskAttachment();
@@ -170,7 +170,7 @@ public class TaskController {
         attachment.setName(name);
         attachment.setSize(size);
         attachment.setFilePath(filePath);
-        attachment.setVoided(false);
+        attachment.setIsDeleted(false);
 
         TaskAttachment savedAttachment = taskAttachmentRepository.save(attachment);
         ApiResponse<TaskAttachmentResponse> response = ApiResponse.success("Lưu tập tin đính kèm thành công",

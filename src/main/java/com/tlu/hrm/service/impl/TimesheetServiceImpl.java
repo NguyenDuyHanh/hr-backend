@@ -67,7 +67,13 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             if (request.getPeriodId() != null) {
-                predicates.add(cb.equal(root.get("period").get("id"), request.getPeriodId()));
+                Optional<Period> periodOpt = periodRepository.findById(request.getPeriodId());
+                if (periodOpt.isPresent()) {
+                    Period period = periodOpt.get();
+                    predicates.add(cb.between(root.get("workingDate"), period.getFromDate(), period.getToDate()));
+                } else {
+                    predicates.add(cb.disjunction());
+                }
             }
 
             if (request.getFromDate() != null) {
@@ -89,7 +95,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 predicates.add(cb.or(codeLike, nameLike));
             }
 
-            predicates.add(cb.or(cb.isNull(root.get("voided")), cb.equal(root.get("voided"), false)));
+            predicates.add(cb.or(cb.isNull(root.get("isDeleted")), cb.equal(root.get("isDeleted"), false)));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
@@ -108,7 +114,7 @@ public class TimesheetServiceImpl implements TimesheetService {
     @Override
     public TimesheetDto getById(UUID id) {
         return timesheetRepository.findById(id)
-                .filter(ts -> ts.getVoided() == null || !ts.getVoided())
+                .filter(ts -> ts.getIsDeleted() == null || !ts.getIsDeleted())
                 .map(TimesheetDto::new)
                 .orElse(null);
     }
@@ -135,12 +141,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
         entity.setStatus(dto.getStatus());
         entity.setNote(dto.getNote());
-
-        if (dto.getPeriodId() != null) {
-            periodRepository.findById(dto.getPeriodId()).ifPresent(entity::setPeriod);
-        } else if (entity.getWorkingDate() != null) {
-            periodRepository.findPeriodContainingDate(entity.getWorkingDate()).ifPresent(entity::setPeriod);
-        }
 
         Timesheet saved = timesheetRepository.save(entity);
         return new TimesheetDto(saved);
@@ -183,10 +183,6 @@ public class TimesheetServiceImpl implements TimesheetService {
                     return ts;
                 });
 
-        if (timesheet.getPeriod() == null && date != null) {
-            periodRepository.findPeriodContainingDate(date).ifPresent(timesheet::setPeriod);
-        }
-
         // Tích hợp Đơn nghỉ phép đã duyệt
         List<LeaveRequest> approvedLeaves = leaveRequestRepository.findApprovedLeaveRequestsOnDate(staffId, date);
         if (!approvedLeaves.isEmpty()) {
@@ -196,12 +192,12 @@ public class TimesheetServiceImpl implements TimesheetService {
             if (leave.getHalfDayLeave() != null && leave.getHalfDayLeave()) {
                 // Nghỉ nửa ngày: Tạo 1 chi tiết công nghỉ phép và quét log cho ca còn lại
                 timesheet.getDetails().clear();
-                
-                ShiftWork offShift = leave.getShiftWorkStart();
+
+                ShiftWork offShift = leave.getShiftWork();
                 if (offShift == null) {
                     offShift = shiftWorkRepository.findByCode("CA_SANG").orElse(null);
                 }
-                
+
                 if (offShift != null) {
                     TimesheetDetail leaveDetail = new TimesheetDetail();
                     leaveDetail.setTimesheet(timesheet);
@@ -212,16 +208,16 @@ public class TimesheetServiceImpl implements TimesheetService {
                     leaveDetail.setLateMinutes(0);
                     leaveDetail.setEarlyMinutes(0);
                     timesheet.getDetails().add(leaveDetail);
-                    
+
                     // Quét log ca còn lại (ca đi làm thực tế)
                     LocalDateTime startOfDay = date.atStartOfDay();
                     LocalDateTime endOfDay = date.atTime(23, 59, 59, 999999999);
                     List<CheckInOutRecord> rawLogs = checkInOutRecordRepository
                             .findByStaffIdAndRecordTimeBetweenOrderByRecordTimeAsc(staffId, startOfDay, endOfDay);
-                    
+
                     String workingShiftCode = "CA_CHIEU".equals(offShift.getCode()) ? "CA_SANG" : "CA_CHIEU";
                     ShiftWork workingShift = shiftWorkRepository.findByCode(workingShiftCode).orElse(null);
-                    
+
                     if (workingShift != null && !rawLogs.isEmpty()) {
                         List<CheckInOutRecord> workingInLogs = new ArrayList<>();
                         List<CheckInOutRecord> workingOutLogs = new ArrayList<>();
@@ -249,18 +245,20 @@ public class TimesheetServiceImpl implements TimesheetService {
                                 }
                             }
                         }
-                        
+
                         if (!workingInLogs.isEmpty() || !workingOutLogs.isEmpty()) {
                             TimesheetDetail workingDetail = new TimesheetDetail();
                             workingDetail.setTimesheet(timesheet);
                             workingDetail.setShift(workingShift);
                             CheckInOutRecord inRec = workingInLogs.isEmpty() ? null : workingInLogs.get(0);
-                            CheckInOutRecord outRec = workingOutLogs.isEmpty() ? null : workingOutLogs.get(workingOutLogs.size() - 1);
-                            mapCheckInOut(workingDetail, inRec, outRec, workingShift.getStartTime(), workingShift.getEndTime(), 0.5);
+                            CheckInOutRecord outRec = workingOutLogs.isEmpty() ? null
+                                    : workingOutLogs.get(workingOutLogs.size() - 1);
+                            mapCheckInOut(workingDetail, inRec, outRec, workingShift.getStartTime(),
+                                    workingShift.getEndTime(), 0.5);
                             timesheet.getDetails().add(workingDetail);
                         }
                     }
-                    
+
                     double totalRatio = 0.0;
                     for (TimesheetDetail d : timesheet.getDetails()) {
                         totalRatio += d.getWorkRatio() != null ? d.getWorkRatio() : 0.0;
@@ -269,7 +267,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                     timesheet.setStandardHours(calculateStandardHours(timesheet.getDetails()));
                     timesheet.setOvertimeHours(calculateOvertimeHours(timesheet.getDetails()));
                     timesheet.setStatus(TimesheetStatus.APPROVED);
-                    timesheet.setNote("Nghỉ nửa ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                    timesheet.setNote(
+                            "Nghỉ nửa ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
                     timesheetRepository.save(timesheet);
                     return;
                 }
@@ -279,7 +278,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                 timesheet.setTotalWorkRatio(isPaid ? 1.0 : 0.0);
                 timesheet.setStandardHours(isPaid ? 8.0 : 0.0);
                 timesheet.setOvertimeHours(0.0);
-                
+
                 TimesheetDetail leaveDetail = new TimesheetDetail();
                 leaveDetail.setTimesheet(timesheet);
                 ShiftWork fullDayShift = shiftWorkRepository.findByCode("CA_CA_NGAY").orElse(null);
@@ -288,9 +287,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                 leaveDetail.setLateMinutes(0);
                 leaveDetail.setEarlyMinutes(0);
                 timesheet.getDetails().add(leaveDetail);
-                
+
                 timesheet.setStatus(TimesheetStatus.APPROVED);
-                timesheet.setNote("Nghỉ cả ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                timesheet.setNote(
+                        "Nghỉ cả ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
                 timesheetRepository.save(timesheet);
                 return;
             }
@@ -308,29 +308,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         ShiftWork afternoonShift = shiftWorkRepository.findByCode("CA_CHIEU").orElse(null);
         ShiftWork fullDayShift = shiftWorkRepository.findByCode("CA_CA_NGAY").orElse(null);
         ShiftWork otShift = shiftWorkRepository.findByCode("CA_OT").orElse(null);
-
-        // 1. Trường hợp nhân viên không cần chấm công (skipTimekeeping = true)
-        if (staff.getSkipTimekeeping() != null && staff.getSkipTimekeeping()) {
-            timesheet.getDetails().clear();
-            if (fullDayShift != null) {
-                TimesheetDetail detail = new TimesheetDetail();
-                detail.setTimesheet(timesheet);
-                detail.setShift(fullDayShift);
-                detail.setCheckInTime(date.atTime(8, 0));
-                detail.setCheckOutTime(date.atTime(17, 30));
-                detail.setLateMinutes(0);
-                detail.setEarlyMinutes(0);
-                detail.setWorkRatio(1.0);
-                timesheet.getDetails().add(detail);
-            }
-            timesheet.setTotalWorkRatio(1.0);
-            double stdHours = calculateStandardHours(timesheet.getDetails());
-            double otHours = calculateOvertimeHours(timesheet.getDetails());
-            timesheet.setStandardHours(stdHours);
-            timesheet.setOvertimeHours(otHours);
-            timesheetRepository.save(timesheet);
-            return;
-        }
 
         // 2. Lấy danh sách lượt quẹt thô trong ngày
         LocalDateTime startOfDay = date.atStartOfDay();
@@ -374,7 +351,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         for (CheckInOutRecord log : rawLogs) {
             ShiftWork logShift = log.getShift();
             CheckInOutType type = log.getRecordType();
-            
+
             if (logShift != null) {
                 String code = logShift.getCode();
                 if ("CA_SANG".equals(code)) {
@@ -455,7 +432,9 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
 
             if (inRec != null && outRec != null) {
-                double ratio = (actualOtShift != null && actualOtShift.getWorkRatio() != null) ? actualOtShift.getWorkRatio() : 0.0;
+                double ratio = (actualOtShift != null && actualOtShift.getWorkRatio() != null)
+                        ? actualOtShift.getWorkRatio()
+                        : 0.0;
                 otDetail.setWorkRatio(ratio);
             } else {
                 otDetail.setWorkRatio(0.0);
@@ -466,8 +445,9 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         // B. Xét ca ban ngày: Ca Cả Ngày vs. Ca Sáng/Chiều
         boolean hasLunchQuets = !lunchLogs.isEmpty();
-        
-        // Kiểm tra xem ngày hôm nay có lượt quẹt nào chỉ định đích danh ca Sáng hoặc ca Chiều không
+
+        // Kiểm tra xem ngày hôm nay có lượt quẹt nào chỉ định đích danh ca Sáng hoặc ca
+        // Chiều không
         boolean hasSpecificHalfDayShift = false;
         for (CheckInOutRecord log : rawLogs) {
             if (log.getShift() != null) {
@@ -507,10 +487,12 @@ public class TimesheetServiceImpl implements TimesheetService {
                 afternoonDetail.setTimesheet(timesheet);
                 afternoonDetail.setShift(afternoonShift);
 
-                // Cải tiến: Nếu không quẹt check-in chiều (afternoonInLogs rỗng) nhưng có quẹt nghỉ trưa (lunchLogs),
-                // ta lấy log quẹt nghỉ trưa cuối cùng làm check-in chiều để tránh nhân viên bị mất công ca chiều khi làm cả ngày
-                CheckInOutRecord inRec = afternoonInLogs.isEmpty() 
-                        ? (lunchLogs.isEmpty() ? null : lunchLogs.get(lunchLogs.size() - 1)) 
+                // Cải tiến: Nếu không quẹt check-in chiều (afternoonInLogs rỗng) nhưng có quẹt
+                // nghỉ trưa (lunchLogs),
+                // ta lấy log quẹt nghỉ trưa cuối cùng làm check-in chiều để tránh nhân viên bị
+                // mất công ca chiều khi làm cả ngày
+                CheckInOutRecord inRec = afternoonInLogs.isEmpty()
+                        ? (lunchLogs.isEmpty() ? null : lunchLogs.get(lunchLogs.size() - 1))
                         : afternoonInLogs.get(0);
                 CheckInOutRecord outRec = afternoonOutLogs.isEmpty() ? null
                         : afternoonOutLogs.get(afternoonOutLogs.size() - 1);
@@ -644,41 +626,41 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (!out.isAfter(in)) {
             return 0.0;
         }
-        
+
         ShiftWork shift = detail.getShift();
         if (shift == null) {
             long minutes = Duration.between(in, out).toMinutes();
             return minutes > 0 ? minutes / 60.0 : 0.0;
         }
-        
+
         // Giới hạn giờ vào/ra của tất cả các ca theo khung giờ của ca đó
         LocalTime shiftStart = shift.getStartTime();
         LocalTime shiftEnd = shift.getEndTime();
-        
+
         LocalTime checkInTime = in.toLocalTime();
         LocalTime checkOutTime = out.toLocalTime();
-        
+
         if (checkInTime.isBefore(shiftStart)) {
             checkInTime = shiftStart;
         }
         if (checkOutTime.isAfter(shiftEnd)) {
             checkOutTime = shiftEnd;
         }
-        
+
         in = in.with(checkInTime);
         out = out.with(checkOutTime);
-        
+
         if (!out.isAfter(in)) {
             return 0.0;
         }
-        
+
         long minutes = Duration.between(in, out).toMinutes();
-        
+
         // Subtract lunch break if it's a full-day shift
         if ("CA_CA_NGAY".equals(shift.getCode())) {
             LocalTime lunchStart = LocalTime.of(12, 0);
             LocalTime lunchEnd = LocalTime.of(13, 30);
-            
+
             if (checkInTime.isBefore(lunchEnd) && checkOutTime.isAfter(lunchStart)) {
                 LocalTime intersectStart = checkInTime.isAfter(lunchStart) ? checkInTime : lunchStart;
                 LocalTime intersectEnd = checkOutTime.isBefore(lunchEnd) ? checkOutTime : lunchEnd;

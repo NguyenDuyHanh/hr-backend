@@ -19,19 +19,17 @@ public class UserDto {
     private UUID id;
     private String username;
     private String password;
-    private String email;
     private Boolean active;
     private Set<Role> roles;
     private UUID staffId;
     private String staffName;
     private String staffCode;
-    private String imagePath;
+    private String avatarUrl;
 
     public UserDto(User entity) {
         if (entity != null) {
             this.id = entity.getId();
             this.username = entity.getUsername();
-            this.email = entity.getEmail();
             this.active = entity.getActive();
             if (entity.getUserRoles() != null) {
                 this.roles = entity.getUserRoles().stream().map(UserRole::getRole).collect(Collectors.toSet());
@@ -40,7 +38,7 @@ public class UserDto {
                 this.staffId = entity.getStaff().getId();
                 this.staffName = entity.getStaff().getDisplayName();
                 this.staffCode = entity.getStaff().getStaffCode();
-                this.imagePath = entity.getStaff().getImagePath();
+                this.avatarUrl = entity.getStaff().getAvatarUrl();
             }
         }
     }

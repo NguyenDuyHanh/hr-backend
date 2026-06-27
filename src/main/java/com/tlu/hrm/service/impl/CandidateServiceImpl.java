@@ -45,7 +45,7 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     public Page<CandidateDto> pagingCandidates(SearchCandidateDto searchDto) {
         List<Candidate> list = candidateRepository.findAll().stream()
-                .filter(c -> c.getVoided() == null || !c.getVoided())
+                .filter(c -> c.getIsDeleted() == null || !c.getIsDeleted())
                 .filter(c -> {
                     if (searchDto != null) {
                         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
@@ -102,7 +102,7 @@ public class CandidateServiceImpl implements CandidateService {
     @Override
     public CandidateDto getById(UUID id) {
         Candidate entity = candidateRepository.findById(id)
-                .filter(c -> c.getVoided() == null || !c.getVoided())
+                .filter(c -> c.getIsDeleted() == null || !c.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ứng viên với ID: " + id));
         return new CandidateDto(entity);
     }
@@ -128,10 +128,9 @@ public class CandidateServiceImpl implements CandidateService {
         entity.setEmail(dto.getEmail());
         entity.setPhoneNumber(dto.getPhoneNumber());
 
-        entity.setCurrentResidence(dto.getCurrentResidence());
-        entity.setCvFilePath(dto.getCvFilePath());
+        entity.setAddress(dto.getAddress());
+        entity.setCvFileUrl(dto.getCvFileUrl());
         entity.setStatus(dto.getStatus() != null ? dto.getStatus() : CandidateStatus.SCREENING); // Mặc định SCREENING: Sơ tuyển hồ sơ
-        entity.setOnboardStatus(dto.getOnboardStatus() != null ? dto.getOnboardStatus() : 0);
         entity.setNote(dto.getNote());
 
         if (dto.getRecruitmentId() != null) {
@@ -168,7 +167,7 @@ public class CandidateServiceImpl implements CandidateService {
     public void deleteCandidate(UUID id) {
         Candidate entity = candidateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ứng viên với ID: " + id));
-        entity.setVoided(true);
+        entity.setIsDeleted(true);
         candidateRepository.save(entity);
     }
 
@@ -177,7 +176,7 @@ public class CandidateServiceImpl implements CandidateService {
         if (ids != null) {
             for (UUID id : ids) {
                 candidateRepository.findById(id).ifPresent(entity -> {
-                    entity.setVoided(true);
+                    entity.setIsDeleted(true);
                     candidateRepository.save(entity);
                 });
             }
@@ -238,7 +237,7 @@ public class CandidateServiceImpl implements CandidateService {
         Candidate cand = candidateRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ứng viên để tiếp nhận với ID: " + id));
 
-        if (cand.getOnboardStatus() == 1) {
+        if (cand.getStatus() == CandidateStatus.ONBOARDED) {
             throw new RuntimeException("Ứng viên này đã được tiếp nhận thành nhân viên trước đó.");
         }
 
@@ -250,19 +249,17 @@ public class CandidateServiceImpl implements CandidateService {
         staff.setEmail(cand.getEmail());
         staff.setPhoneNumber(cand.getPhoneNumber());
 
-        staff.setCurrentResidence(cand.getCurrentResidence());
+        staff.setCurrentResidence(cand.getAddress());
         
         staff.setDepartment(cand.getDepartment());
         staff.setPosition(cand.getPosition());
 
         staff.setStartDate(LocalDate.now());
-        staff.setRecruitmentDate(LocalDate.now());
         staff.setWorkingStatus("Thử việc"); // Trạng thái ban đầu khi onboard
 
         Staff savedStaff = staffRepository.save(staff);
 
         // Cập nhật trạng thái ứng viên
-        cand.setOnboardStatus(1);
         cand.setStatus(CandidateStatus.ONBOARDED); // Đã onboard
 
         candidateRepository.save(cand);

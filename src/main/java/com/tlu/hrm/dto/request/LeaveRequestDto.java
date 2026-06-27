@@ -31,16 +31,11 @@ public class LeaveRequestDto {
     private LeaveApprovalStatus approvalStatus;
     
     private Double totalDays;
-    private Double totalHours;
     
     private Boolean halfDayLeave;
-    private Boolean halfDayLeaveStart;
-    private Boolean halfDayLeaveEnd;
     
-    private UUID shiftWorkStartId;
-    private String shiftWorkStartName;
-    private UUID shiftWorkEndId;
-    private String shiftWorkEndName;
+    private UUID shiftWorkId;
+    private String shiftWorkName;
     
     private String rejectReason;
 
@@ -66,17 +61,10 @@ public class LeaveRequestDto {
             this.requestReason = entity.getRequestReason();
             this.approvalStatus = entity.getApprovalStatus();
             this.totalDays = entity.getTotalDays();
-            this.totalHours = entity.getTotalHours();
             this.halfDayLeave = entity.getHalfDayLeave();
-            this.halfDayLeaveStart = entity.getHalfDayLeaveStart();
-            this.halfDayLeaveEnd = entity.getHalfDayLeaveEnd();
-            if (entity.getShiftWorkStart() != null) {
-                this.shiftWorkStartId = entity.getShiftWorkStart().getId();
-                this.shiftWorkStartName = entity.getShiftWorkStart().getName();
-            }
-            if (entity.getShiftWorkEnd() != null) {
-                this.shiftWorkEndId = entity.getShiftWorkEnd().getId();
-                this.shiftWorkEndName = entity.getShiftWorkEnd().getName();
+            if (entity.getShiftWork() != null) {
+                this.shiftWorkId = entity.getShiftWork().getId();
+                this.shiftWorkName = entity.getShiftWork().getName();
             }
             this.rejectReason = entity.getRejectReason();
         }

@@ -49,25 +49,12 @@ public class LeaveRequest extends BaseModel {
     @Column(name = "total_days", nullable = false)
     private Double totalDays = 0.0;
 
-    @Column(name = "total_hours", nullable = false)
-    private Double totalHours = 0.0;
-
     @Column(name = "half_day_leave")
     private Boolean halfDayLeave = false;
 
-    @Column(name = "half_day_leave_start")
-    private Boolean halfDayLeaveStart = false;
-
-    @Column(name = "half_day_leave_end")
-    private Boolean halfDayLeaveEnd = false;
-
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shift_work_start_id")
-    private ShiftWork shiftWorkStart;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shift_work_end_id")
-    private ShiftWork shiftWorkEnd;
+    @JoinColumn(name = "shift_work_id")
+    private ShiftWork shiftWork;
 
     @Column(name = "reject_reason")
     private String rejectReason;

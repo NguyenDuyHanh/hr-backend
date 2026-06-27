@@ -15,14 +15,12 @@ import java.time.LocalDate;
 @AllArgsConstructor
 public class Period extends BaseModel {
 
-    @Column(name = "code", unique = true)
+    @Column(name = "code")
     private String code;
 
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "period", nullable = false)
-    private String period;
 
     @Column(name = "month", nullable = false)
     private Integer month;

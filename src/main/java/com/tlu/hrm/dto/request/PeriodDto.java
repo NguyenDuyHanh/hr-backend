@@ -15,7 +15,6 @@ public class PeriodDto {
     private UUID id;
     private String code;
     private String name;
-    private String period;
     private Integer month;
     private Integer year;
     private LocalDate fromDate;
@@ -28,7 +27,6 @@ public class PeriodDto {
             this.id = entity.getId();
             this.code = entity.getCode();
             this.name = entity.getName();
-            this.period = entity.getPeriod();
             this.month = entity.getMonth();
             this.year = entity.getYear();
             this.fromDate = entity.getFromDate();

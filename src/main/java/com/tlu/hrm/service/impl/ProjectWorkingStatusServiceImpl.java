@@ -27,7 +27,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
 
     private Project getProject(UUID projectId) {
         return projectRepository.findById(projectId)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + projectId));
     }
 
@@ -35,7 +35,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
     public List<ProjectWorkingStatusResponse> getProjectWorkingStatuses(UUID projectId, String keyword) {
         getProject(projectId);
         return projectWorkingStatusRepository.findByProjectIdOrderByDisplayOrderAsc(projectId).stream()
-                .filter(ws -> ws.getVoided() == null || !ws.getVoided())
+                .filter(ws -> ws.getIsDeleted() == null || !ws.getIsDeleted())
                 .filter(ws -> {
                     if (keyword == null || keyword.trim().isEmpty()) {
                         return true;
@@ -60,7 +60,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
         ws.setDescription(request.getDescription());
         ws.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
         ws.setColor(request.getColor() != null ? request.getColor() : "#9e9e9e");
-        ws.setVoided(false);
+        ws.setIsDeleted(false);
 
         ProjectWorkingStatus saved = projectWorkingStatusRepository.save(ws);
         return new ProjectWorkingStatusResponse(saved);
@@ -88,7 +88,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
         getProject(projectId);
         ProjectWorkingStatus ws = projectWorkingStatusRepository.findById(statusId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy trạng thái công việc"));
-        ws.setVoided(true);
+        ws.setIsDeleted(true);
         projectWorkingStatusRepository.save(ws);
     }
 

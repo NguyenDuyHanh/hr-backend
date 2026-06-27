@@ -15,7 +15,7 @@ public class Project extends BaseModel {
     @Column(name = "name", nullable = false)
     private String name;
 
-    @Column(name = "code", unique = true)
+    @Column(name = "code")
     private String code;
 
     @Column(name = "description")

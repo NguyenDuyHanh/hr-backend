@@ -17,7 +17,7 @@ public interface TimesheetRepository extends JpaRepository<Timesheet, UUID>, Jpa
     List<Timesheet> findByStaffIdAndWorkingDateBetweenOrderByWorkingDateAsc(UUID staffId, LocalDate start, LocalDate end);
     List<Timesheet> findByStaffIdAndWorkingDateBetweenAndStatus(UUID staffId, LocalDate start, LocalDate end, TimesheetStatus status);
 
-    @org.springframework.data.jpa.repository.Query("SELECT t FROM Timesheet t WHERE t.staff.id = :staffId AND t.workingDate BETWEEN :start AND :end AND t.status = :status AND (t.voided = false OR t.voided IS NULL)")
+    @org.springframework.data.jpa.repository.Query("SELECT t FROM Timesheet t WHERE t.staff.id = :staffId AND t.workingDate BETWEEN :start AND :end AND t.status = :status AND (t.isDeleted = false OR t.isDeleted IS NULL)")
     List<Timesheet> findActiveTimesheetsByStaffIdAndWorkingDateBetweenAndStatus(
             @org.springframework.data.repository.query.Param("staffId") UUID staffId, 
             @org.springframework.data.repository.query.Param("start") java.time.LocalDate start, 

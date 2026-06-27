@@ -1,5 +1,7 @@
 package com.tlu.hrm.enums;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 import lombok.Getter;
 
 @Getter
@@ -9,6 +11,7 @@ public enum RecruitmentStatus {
     PAUSED(2, "Tạm dừng"),
     CLOSED(3, "Đã đóng");
 
+    @JsonValue
     private final int value;
     private final String label;
 
@@ -17,6 +20,7 @@ public enum RecruitmentStatus {
         this.label = label;
     }
 
+    @JsonCreator
     public static RecruitmentStatus fromValue(Integer value) {
         if (value == null) {
             return null;

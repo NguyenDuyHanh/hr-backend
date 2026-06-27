@@ -33,7 +33,7 @@ public class ShiftWorkServiceImpl implements ShiftWorkService {
     @Override
     public Page<ShiftWorkDto> getPage(int pageIndex, int pageSize, String keyword) {
         List<ShiftWork> filteredList = shiftWorkRepository.findAll().stream()
-                .filter(shift -> shift.getVoided() == null || !shift.getVoided())
+                .filter(shift -> shift.getIsDeleted() == null || !shift.getIsDeleted())
                 .filter(shift -> {
                     if (keyword != null && !keyword.isEmpty()) {
                         String kw = keyword.toLowerCase();
@@ -64,7 +64,7 @@ public class ShiftWorkServiceImpl implements ShiftWorkService {
     @Override
     public List<ShiftWorkDto> getAll() {
         return shiftWorkRepository.findAll().stream()
-                .filter(shift -> shift.getVoided() == null || !shift.getVoided())
+                .filter(shift -> shift.getIsDeleted() == null || !shift.getIsDeleted())
                 .map(ShiftWorkDto::new)
                 .collect(Collectors.toList());
     }
@@ -92,7 +92,7 @@ public class ShiftWorkServiceImpl implements ShiftWorkService {
     @Override
     public ShiftWorkDto getById(UUID id) {
         return shiftWorkRepository.findById(id)
-                .filter(shift -> shift.getVoided() == null || !shift.getVoided())
+                .filter(shift -> shift.getIsDeleted() == null || !shift.getIsDeleted())
                 .map(ShiftWorkDto::new)
                 .orElse(null);
     }
@@ -102,7 +102,7 @@ public class ShiftWorkServiceImpl implements ShiftWorkService {
         Optional<ShiftWork> optional = shiftWorkRepository.findById(id);
         if (optional.isPresent()) {
             ShiftWork entity = optional.get();
-            entity.setVoided(true);
+            entity.setIsDeleted(true);
             shiftWorkRepository.save(entity);
             return true;
         }

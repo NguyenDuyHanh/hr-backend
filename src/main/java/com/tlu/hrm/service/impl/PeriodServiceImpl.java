@@ -50,14 +50,13 @@ public class PeriodServiceImpl implements PeriodService {
             finalCode = code.trim().toUpperCase();
         }
 
-        Optional<Period> existing = periodRepository.findByCode(finalCode);
-        if (existing.isPresent() && (existing.get().getVoided() == null || !existing.get().getVoided())) {
+        Optional<Period> existing = periodRepository.findActiveByCode(finalCode);
+        if (existing.isPresent()) {
             throw new CustomException("Mã kỳ lương '" + finalCode + "' đã tồn tại", HttpStatus.BAD_REQUEST);
         }
 
         period.setCode(finalCode);
         period.setDescription(dto.getDescription());
-        period.setPeriod(String.format("%02d/%d", dto.getMonth(), dto.getYear()));
         period.setMonth(dto.getMonth());
         period.setYear(dto.getYear());
         period.setFromDate(dto.getFromDate());
@@ -79,14 +78,13 @@ public class PeriodServiceImpl implements PeriodService {
             finalCode = code.trim().toUpperCase();
         }
 
-        Optional<Period> existing = periodRepository.findByCode(finalCode);
-        if (existing.isPresent() && !existing.get().getId().equals(id) && (existing.get().getVoided() == null || !existing.get().getVoided())) {
+        Optional<Period> existing = periodRepository.findActiveByCode(finalCode);
+        if (existing.isPresent() && !existing.get().getId().equals(id)) {
             throw new CustomException("Mã kỳ lương '" + finalCode + "' đã tồn tại ở một kỳ lương khác", HttpStatus.BAD_REQUEST);
         }
 
         period.setCode(finalCode);
         period.setDescription(dto.getDescription());
-        period.setPeriod(String.format("%02d/%d", dto.getMonth(), dto.getYear()));
         period.setMonth(dto.getMonth());
         period.setYear(dto.getYear());
         period.setFromDate(dto.getFromDate());
@@ -98,7 +96,7 @@ public class PeriodServiceImpl implements PeriodService {
     @Override
     public List<Period> getAllPeriods() {
         return periodRepository.findAll().stream()
-                .filter(period -> period.getVoided() == null || !period.getVoided())
+                .filter(period -> period.getIsDeleted() == null || !period.getIsDeleted())
                 .collect(Collectors.toList());
     }
 
@@ -107,24 +105,24 @@ public class PeriodServiceImpl implements PeriodService {
     public void deletePeriod(UUID periodId) {
         Period period = periodRepository.findById(periodId)
                 .orElseThrow(() -> new IllegalArgumentException("Kỳ lương không tồn tại"));
-        period.setVoided(true);
+        period.setIsDeleted(true);
         periodRepository.save(period);
 
-        List<Payroll> payrolls = payrollRepository.findByPayrollPeriodId(periodId);
+        List<Payroll> payrolls = payrollRepository.findByPeriodId(periodId);
         for (Payroll payroll : payrolls) {
-            payroll.setVoided(true);
+            payroll.setIsDeleted(true);
             payrollRepository.save(payroll);
 
             List<Payslip> payslips = payslipRepository.findByPayrollId(payroll.getId());
             for (Payslip payslip : payslips) {
-                payslip.setVoided(true);
+                payslip.setIsDeleted(true);
             }
             payslipRepository.saveAll(payslips);
         }
     }
 
     @Override
-    public Page<Period> search(PeriodSearchRequest request) {
+    public Page<Period> getPeriods(PeriodSearchRequest request) {
         Specification<Period> spec = (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
@@ -160,7 +158,7 @@ public class PeriodServiceImpl implements PeriodService {
                 ));
             }
 
-            predicates.add(cb.or(cb.isNull(root.get("voided")), cb.equal(root.get("voided"), false)));
+            predicates.add(cb.or(cb.isNull(root.get("isDeleted")), cb.equal(root.get("isDeleted"), false)));
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

@@ -28,7 +28,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
 
     private Project getProject(UUID projectId) {
         return projectRepository.findById(projectId)
-                .filter(p -> p.getVoided() == null || !p.getVoided())
+                .filter(p -> p.getIsDeleted() == null || !p.getIsDeleted())
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + projectId));
     }
 
@@ -36,7 +36,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
     public List<ProjectActivityResponse> getProjectActivities(UUID projectId, String keyword) {
         getProject(projectId);
         return projectActivityRepository.findByProjectIdOrderByDisplayOrderAsc(projectId).stream()
-                .filter(a -> a.getVoided() == null || !a.getVoided())
+                .filter(a -> a.getIsDeleted() == null || !a.getIsDeleted())
                 .filter(a -> {
                     if (keyword == null || keyword.trim().isEmpty()) {
                         return true;
@@ -62,7 +62,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
         activity.setStartTime(request.getStartTime());
         activity.setEndTime(request.getEndTime());
         activity.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
-        activity.setVoided(false);
+        activity.setIsDeleted(false);
 
         ProjectActivity saved = projectActivityRepository.save(activity);
         return new ProjectActivityResponse(saved);
@@ -93,7 +93,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
         getProject(projectId);
         ProjectActivity activity = projectActivityRepository.findById(activityId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy hoạt động"));
-        activity.setVoided(true);
+        activity.setIsDeleted(true);
         projectActivityRepository.save(activity);
     }
 

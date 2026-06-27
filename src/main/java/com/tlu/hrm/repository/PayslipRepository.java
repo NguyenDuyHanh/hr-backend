@@ -15,5 +15,5 @@ public interface PayslipRepository extends JpaRepository<Payslip, UUID>, JpaSpec
     void deleteByPayrollId(UUID payrollId);
     List<Payslip> findByPayrollId(UUID payrollId);
     Optional<Payslip> findByStaffIdAndPayrollId(UUID staffId, UUID payrollId);
-    Optional<Payslip> findByStaffIdAndPayrollPayrollPeriodIdAndPayrollStatus(UUID staffId, UUID payrollPeriodId, PayrollStatus status);
+    Optional<Payslip> findByStaffIdAndPayrollPeriodIdAndPayrollStatus(UUID staffId, UUID periodId, PayrollStatus status);
 }

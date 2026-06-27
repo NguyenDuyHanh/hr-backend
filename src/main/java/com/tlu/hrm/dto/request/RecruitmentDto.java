@@ -1,6 +1,7 @@
 package com.tlu.hrm.dto.request;
 
 import com.tlu.hrm.model.Recruitment;
+import com.tlu.hrm.enums.RecruitmentStatus;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,7 +18,7 @@ public class RecruitmentDto {
     private String code;
     private String name;
     private String description;
-    private Integer status;
+    private RecruitmentStatus status;
     private UUID personApproveCVId;
     private String personApproveCVName;
 

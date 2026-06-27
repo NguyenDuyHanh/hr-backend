@@ -16,7 +16,7 @@ import lombok.Setter;
 @AllArgsConstructor
 public class SalaryItem extends BaseModel {
 
-    @Column(name = "code", unique = true, nullable = false)
+    @Column(name = "code", nullable = false)
     private String code;
 
     @Column(name = "name", nullable = false)

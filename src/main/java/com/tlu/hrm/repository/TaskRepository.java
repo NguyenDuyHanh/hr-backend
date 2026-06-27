@@ -12,10 +12,9 @@ import java.util.UUID;
 @Repository
 public interface TaskRepository extends JpaRepository<Task, UUID> {
     
-    @Query("SELECT MAX(t.code) FROM Task t WHERE t.project.id = :projectId")
-    Long findMaxCodeByProjectId(@Param("projectId") UUID projectId);
+    List<Task> findByProjectId(UUID projectId);
 
-    List<Task> findByProjectIdAndVoidedFalse(UUID projectId);
+    List<Task> findByProjectIdAndIsDeletedFalse(UUID projectId);
     
-    List<Task> findByProjectIdAndStatusIdAndVoidedFalse(UUID projectId, UUID statusId);
+    List<Task> findByProjectIdAndStatusIdAndIsDeletedFalse(UUID projectId, UUID statusId);
 }
