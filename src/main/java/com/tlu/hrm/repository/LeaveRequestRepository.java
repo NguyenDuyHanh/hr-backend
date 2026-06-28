@@ -1,6 +1,8 @@
 package com.tlu.hrm.repository;
 
+import com.tlu.hrm.enums.LeaveApprovalStatus;
 import com.tlu.hrm.model.LeaveRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
@@ -37,4 +39,10 @@ public interface LeaveRequestRepository extends JpaRepository<LeaveRequest, UUID
     List<LeaveRequest> findApprovedLeaveRequestsOnDate(
             @Param("staffId") UUID staffId,
             @Param("date") LocalDate date);
+
+    @Query("SELECT COUNT(r) FROM LeaveRequest r WHERE r.approvalStatus = :status AND (r.isDeleted = false OR r.isDeleted IS NULL)")
+    long countByApprovalStatusAndNotDeleted(@Param("status") LeaveApprovalStatus status);
+
+    @Query("SELECT r FROM LeaveRequest r WHERE (r.isDeleted = false OR r.isDeleted IS NULL) ORDER BY r.createDate DESC")
+    List<LeaveRequest> findRecentLeaves(Pageable pageable);
 }

@@ -25,12 +25,20 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     boolean existsByEmailAndActive(@Param("email") String email);
 
     @Query("SELECT COUNT(s) > 0 FROM Staff s WHERE s.email = :email AND s.id <> :id AND (s.isDeleted = false OR s.isDeleted IS NULL)")
-    boolean existsByEmailAndIdNotAndActive(@Param("email") String email,
-            @Param("id") UUID id);
+    boolean existsByEmailAndIdNotAndActive(@Param("email") String email, @Param("id") UUID id);
 
     @Query("SELECT COUNT(s) > 0 FROM Staff s WHERE s.department.id = :deptId AND (s.isDeleted = false OR s.isDeleted IS NULL)")
     boolean existsActiveStaffByDepartmentId(@Param("deptId") UUID deptId);
 
     @Query("SELECT COUNT(s) > 0 FROM Staff s WHERE s.position.id = :posId AND (s.isDeleted = false OR s.isDeleted IS NULL)")
     boolean existsActiveStaffByPositionId(@Param("posId") UUID posId);
+
+    @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL)")
+    long countAllActiveStaff();
+
+    @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL) AND s.workingStatus = '7'")
+    long countWorkingStaff();
+
+    @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL) AND s.startDate BETWEEN :startDate AND :endDate")
+    long countNewStaffBetween(@Param("startDate") java.time.LocalDate startDate, @Param("endDate") java.time.LocalDate endDate);
 }
