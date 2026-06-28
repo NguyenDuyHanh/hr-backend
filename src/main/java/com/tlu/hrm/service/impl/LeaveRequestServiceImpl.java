@@ -62,7 +62,8 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
             }
 
             if (request.getDepartmentId() != null) {
-                predicates.add(cb.equal(root.get("requestStaff").get("department").get("id"), request.getDepartmentId()));
+                predicates
+                        .add(cb.equal(root.get("requestStaff").get("department").get("id"), request.getDepartmentId()));
             }
 
             if (request.getFromDate() != null) {
@@ -108,17 +109,17 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     public LeaveRequestDto create(LeaveRequestDto dto) {
         LeaveRequest entity = new LeaveRequest();
         mapDtoToEntity(dto, entity);
-        
+
         // Mặc định ngày tạo đơn và trạng thái PENDING
         entity.setRequestDate(LocalDate.now());
         entity.setApprovalStatus(LeaveApprovalStatus.PENDING);
-        
+
         // Tính tổng số ngày phép
         calculateDaysAndHours(entity);
-        
+
         // Kiểm tra trùng lịch
         validateOverlap(entity);
-        
+
         // Nếu là đơn nghỉ phép năm, kiểm tra xem có vượt quá định mức không
         if (entity.getLeaveType() == LeaveType.ANNUAL) {
             validateLeaveBalanceLimit(entity);
@@ -132,7 +133,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     public LeaveRequestDto update(UUID id, LeaveRequestDto dto) {
         LeaveRequest entity = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn nghỉ phép"));
-        
+
         if (entity.getApprovalStatus() != LeaveApprovalStatus.PENDING) {
             throw new IllegalStateException("Chỉ có thể cập nhật đơn nghỉ phép ở trạng thái chờ duyệt (PENDING)");
         }
@@ -140,7 +141,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         mapDtoToEntity(dto, entity);
         calculateDaysAndHours(entity);
         validateOverlap(entity);
-        
+
         if (entity.getLeaveType() == LeaveType.ANNUAL) {
             validateLeaveBalanceLimit(entity);
         }
@@ -153,10 +154,10 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     public void delete(UUID id) {
         LeaveRequest entity = leaveRequestRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn nghỉ phép"));
-        
+
         // Đơn đã duyệt mà bị xóa (hoặc hủy) cần cập nhật lại Timesheet
         LeaveApprovalStatus oldStatus = entity.getApprovalStatus();
-        
+
         entity.setIsDeleted(true);
         leaveRequestRepository.save(entity);
 
@@ -200,7 +201,8 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         entity.setRejectReason(rejectReason);
         LeaveRequest saved = leaveRequestRepository.save(entity);
 
-        // Nếu trước đó đơn đã được APPROVED, nay chuyển sang REJECTED thì cần tính toán lại Timesheet để bỏ công phép
+        // Nếu trước đó đơn đã được APPROVED, nay chuyển sang REJECTED thì cần tính toán
+        // lại Timesheet để bỏ công phép
         if (oldStatus == LeaveApprovalStatus.APPROVED) {
             updateTimesheetsForLeaveRequest(saved);
         }
@@ -243,12 +245,12 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                     .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhân viên yêu cầu"));
             entity.setRequestStaff(requestStaff);
         }
-        
+
         entity.setLeaveType(dto.getLeaveType());
         entity.setFromDate(dto.getFromDate());
         entity.setToDate(dto.getToDate());
         entity.setRequestReason(dto.getRequestReason());
-        
+
         entity.setHalfDayLeave(dto.getHalfDayLeave() != null ? dto.getHalfDayLeave() : false);
 
         if (dto.getShiftWorkId() != null) {
@@ -290,8 +292,7 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                 request.getRequestStaff().getId(),
                 request.getFromDate(),
                 request.getToDate(),
-                request.getId()
-        );
+                request.getId());
         if (!overlaps.isEmpty()) {
             throw new IllegalArgumentException("Nhân viên đã có đơn nghỉ phép trùng lặp trong khoảng thời gian này!");
         }
@@ -307,14 +308,14 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
 
         if (used + request.getTotalDays() > limit) {
             throw new IllegalArgumentException(String.format(
-                "Không đủ phép năm còn lại! Định mức: %.1f, Đã dùng: %.1f, Đăng ký mới: %.1f", 
-                limit, used, request.getTotalDays()
-            ));
+                    "Không đủ phép năm còn lại! Định mức: %.1f, Đã dùng: %.1f, Đăng ký mới: %.1f",
+                    limit, used, request.getTotalDays()));
         }
     }
 
     private void updateTimesheetsForLeaveRequest(LeaveRequest request) {
-        if (request.getRequestStaff() == null) return;
+        if (request.getRequestStaff() == null)
+            return;
         UUID staffId = request.getRequestStaff().getId();
         LocalDate start = request.getFromDate();
         LocalDate end = request.getToDate();
@@ -341,19 +342,24 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
                     if (searchDto != null) {
                         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
                             String keyword = searchDto.getKeyword().toLowerCase();
-                            boolean matches = (staff.getStaffCode() != null && staff.getStaffCode().toLowerCase().contains(keyword))
-                                || (staff.getDisplayName() != null && staff.getDisplayName().toLowerCase().contains(keyword))
-                                || (staff.getEmail() != null && staff.getEmail().toLowerCase().contains(keyword))
-                                || (staff.getPhoneNumber() != null && staff.getPhoneNumber().contains(keyword));
-                            if (!matches) return false;
+                            boolean matches = (staff.getStaffCode() != null
+                                    && staff.getStaffCode().toLowerCase().contains(keyword))
+                                    || (staff.getDisplayName() != null
+                                            && staff.getDisplayName().toLowerCase().contains(keyword))
+                                    || (staff.getEmail() != null && staff.getEmail().toLowerCase().contains(keyword))
+                                    || (staff.getPhoneNumber() != null && staff.getPhoneNumber().contains(keyword));
+                            if (!matches)
+                                return false;
                         }
                         if (searchDto.getDepartmentId() != null) {
-                            if (staff.getDepartment() == null || !staff.getDepartment().getId().equals(searchDto.getDepartmentId())) {
+                            if (staff.getDepartment() == null
+                                    || !staff.getDepartment().getId().equals(searchDto.getDepartmentId())) {
                                 return false;
                             }
                         }
                         if (searchDto.getPositionId() != null) {
-                            if (staff.getPosition() == null || !staff.getPosition().getId().equals(searchDto.getPositionId())) {
+                            if (staff.getPosition() == null
+                                    || !staff.getPosition().getId().equals(searchDto.getPositionId())) {
                                 return false;
                             }
                         }
