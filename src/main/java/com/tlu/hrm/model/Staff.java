@@ -6,6 +6,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.tlu.hrm.enums.Gender;
+import com.tlu.hrm.enums.WorkingStatus;
+
 import java.time.LocalDate;
 
 @Entity
@@ -28,11 +31,13 @@ public class Staff extends BaseModel {
     @Column(name = "phone_number")
     private String phoneNumber;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gender")
-    private String gender;
+    private Gender gender;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "working_status")
-    private String workingStatus;
+    private WorkingStatus workingStatus;
 
     @Column(name = "birth_date")
     private LocalDate birthDate;

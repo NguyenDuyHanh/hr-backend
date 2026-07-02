@@ -1,12 +1,16 @@
 package com.tlu.hrm.service.impl;
 
 import com.tlu.hrm.dto.request.CheckInOutRecordDto;
+import com.tlu.hrm.enums.TimesheetStatus;
 import com.tlu.hrm.model.CheckInOutRecord;
 import com.tlu.hrm.model.ShiftWork;
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.model.Timesheet;
+import com.tlu.hrm.model.TimesheetDetail;
 import com.tlu.hrm.repository.CheckInOutRecordRepository;
 import com.tlu.hrm.repository.ShiftWorkRepository;
 import com.tlu.hrm.repository.StaffRepository;
+import com.tlu.hrm.repository.TimesheetRepository;
 import com.tlu.hrm.service.CheckInOutService;
 import com.tlu.hrm.service.TimesheetService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -38,7 +43,7 @@ public class CheckInOutServiceImpl implements CheckInOutService {
     private TimesheetService timesheetService;
 
     @Autowired
-    private com.tlu.hrm.repository.TimesheetRepository timesheetRepository;
+    private TimesheetRepository timesheetRepository;
 
     @Override
     public CheckInOutRecordDto save(CheckInOutRecordDto dto) {
@@ -56,16 +61,17 @@ public class CheckInOutServiceImpl implements CheckInOutService {
         recordTime = recordTime.withSecond(0).withNano(0);
 
         // Kiểm tra xem bảng công hôm nay đã được DUYỆT hoặc TỪ CHỐI chưa
-        java.util.Optional<com.tlu.hrm.model.Timesheet> timesheetOpt = timesheetRepository
+        Optional<Timesheet> timesheetOpt = timesheetRepository
                 .findByStaffIdAndWorkingDate(staff.getId(), recordTime.toLocalDate());
         if (timesheetOpt.isPresent()) {
-            com.tlu.hrm.model.Timesheet timesheet = timesheetOpt.get();
-            com.tlu.hrm.enums.TimesheetStatus status = timesheet.getStatus();
-            if (status == com.tlu.hrm.enums.TimesheetStatus.APPROVED || status == com.tlu.hrm.enums.TimesheetStatus.REJECTED) {
-                // Nếu là bảng công đã duyệt/từ chối, chỉ cho phép chấm công cho CA MỚI (chưa có trong chi tiết ngày hôm đó)
+            Timesheet timesheet = timesheetOpt.get();
+            TimesheetStatus status = timesheet.getStatus();
+            if (status == TimesheetStatus.APPROVED || status == TimesheetStatus.REJECTED) {
+                // Nếu là bảng công đã duyệt/từ chối, chỉ cho phép chấm công cho CA MỚI (chưa có
+                // trong chi tiết ngày hôm đó)
                 boolean shiftExists = false;
                 if (dto.getShiftId() != null && timesheet.getDetails() != null) {
-                    for (com.tlu.hrm.model.TimesheetDetail detail : timesheet.getDetails()) {
+                    for (TimesheetDetail detail : timesheet.getDetails()) {
                         if (detail.getShift() != null && detail.getShift().getId().equals(dto.getShiftId())) {
                             shiftExists = true;
                             break;
@@ -73,16 +79,17 @@ public class CheckInOutServiceImpl implements CheckInOutService {
                     }
                 }
                 // Comment out for testing: Allow checking in on approved days
-                // if (shiftExists || dto.getShiftId() == null) {
-                //     throw new IllegalStateException("Ca làm việc này trong ngày hôm nay đã được quản lý phê duyệt hoặc từ chối, không thể tiếp tục chấm công cho ca này!");
-                // }
+                if (shiftExists || dto.getShiftId() == null) {
+                    throw new IllegalStateException(
+                            "Ca làm việc này trong ngày hôm nay đã được quản lý phê duyệt hoặc từ chối, không thể tiếp tục chấm công cho ca này!");
+                }
             }
         }
 
         CheckInOutRecord record = new CheckInOutRecord();
         record.setStaff(staff);
         record.setRecordTime(recordTime);
-        
+
         record.setIpAddress(dto.getIpAddress());
         record.setLatitude(dto.getLatitude());
         record.setLongitude(dto.getLongitude());

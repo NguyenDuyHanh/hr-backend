@@ -9,6 +9,7 @@ import com.tlu.hrm.repository.StaffRepository;
 import com.tlu.hrm.repository.UserRepository;
 import com.tlu.hrm.service.UserService;
 import com.tlu.hrm.exception.ResourceNotFoundException;
+import com.tlu.hrm.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -32,6 +33,9 @@ public class UserServiceImpl implements UserService {
     private StaffRepository staffRepository;
 
     @Autowired
+    private SecurityUtils securityUtils;
+
+    @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Override
@@ -43,12 +47,14 @@ public class UserServiceImpl implements UserService {
                         // 1. Keyword search (username, email, staff display name, staff code)
                         if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
                             String keyword = searchDto.getKeyword().toLowerCase();
-                            boolean matches = (user.getUsername() != null && user.getUsername().toLowerCase().contains(keyword))
-                                || (user.getStaff() != null && (
-                                    (user.getStaff().getDisplayName() != null && user.getStaff().getDisplayName().toLowerCase().contains(keyword))
-                                    || (user.getStaff().getStaffCode() != null && user.getStaff().getStaffCode().toLowerCase().contains(keyword))
-                                ));
-                            if (!matches) return false;
+                            boolean matches = (user.getUsername() != null
+                                    && user.getUsername().toLowerCase().contains(keyword))
+                                    || (user.getStaff() != null && ((user.getStaff().getDisplayName() != null
+                                            && user.getStaff().getDisplayName().toLowerCase().contains(keyword))
+                                            || (user.getStaff().getStaffCode() != null && user.getStaff().getStaffCode()
+                                                    .toLowerCase().contains(keyword))));
+                            if (!matches)
+                                return false;
                         }
                         // 2. Active status filter
                         if (searchDto.getActive() != null) {
@@ -58,21 +64,25 @@ public class UserServiceImpl implements UserService {
                         }
                         // 3. Department filter (linked via staff)
                         if (searchDto.getDepartmentId() != null) {
-                            if (user.getStaff() == null || user.getStaff().getDepartment() == null || !user.getStaff().getDepartment().getId().equals(searchDto.getDepartmentId())) {
+                            if (user.getStaff() == null || user.getStaff().getDepartment() == null
+                                    || !user.getStaff().getDepartment().getId().equals(searchDto.getDepartmentId())) {
                                 return false;
                             }
                         }
                         // 4. Position filter (linked via staff)
                         if (searchDto.getPositionId() != null) {
-                            if (user.getStaff() == null || user.getStaff().getPosition() == null || !user.getStaff().getPosition().getId().equals(searchDto.getPositionId())) {
+                            if (user.getStaff() == null || user.getStaff().getPosition() == null
+                                    || !user.getStaff().getPosition().getId().equals(searchDto.getPositionId())) {
                                 return false;
                             }
                         }
                         // 5. Role filter
                         if (searchDto.getRoleId() != null) {
                             boolean hasRole = user.getUserRoles() != null && user.getUserRoles().stream()
-                                .anyMatch(ur -> ur.getRole() != null && ur.getRole().getId().equals(searchDto.getRoleId()));
-                            if (!hasRole) return false;
+                                    .anyMatch(ur -> ur.getRole() != null
+                                            && ur.getRole().getId().equals(searchDto.getRoleId()));
+                            if (!hasRole)
+                                return false;
                         }
                     }
                     return true;
@@ -127,6 +137,10 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public void deleteUser(UUID id) {
+        User currentUser = securityUtils.getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(id)) {
+            throw new IllegalArgumentException("Bạn không thể tự xóa tài khoản của chính mình");
+        }
         userRepository.findById(id).ifPresent(user -> {
             user.setIsDeleted(true);
             userRepository.save(user);
@@ -168,12 +182,34 @@ public class UserServiceImpl implements UserService {
                 user.getUserRoles().add(userRole);
             }
         }
-        
+
         if (dto.getStaffId() != null) {
             staffRepository.findById(dto.getStaffId()).ifPresent(user::setStaff);
         } else {
             user.setStaff(null);
         }
         return user;
+    }
+
+    @Override
+    public UserDto lockUser(UUID id) {
+        User currentUser = securityUtils.getCurrentUser();
+        if (currentUser != null && currentUser.getId().equals(id)) {
+            throw new IllegalArgumentException("Không thể tự khóa tài khoản của chính mình");
+        }
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        user.setActive(false);
+        User saved = userRepository.save(user);
+        return new UserDto(saved);
+    }
+
+    @Override
+    public UserDto unlockUser(UUID id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + id));
+        user.setActive(true);
+        User saved = userRepository.save(user);
+        return new UserDto(saved);
     }
 }

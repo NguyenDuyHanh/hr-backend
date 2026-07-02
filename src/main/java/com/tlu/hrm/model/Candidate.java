@@ -8,6 +8,7 @@ import lombok.Setter;
 
 import java.time.LocalDate;
 import com.tlu.hrm.enums.CandidateStatus;
+import com.tlu.hrm.enums.Gender;
 
 @Entity
 @Table(name = "tbl_candidate")
@@ -23,8 +24,9 @@ public class Candidate extends BaseModel {
     @Column(name = "display_name", nullable = false)
     private String displayName;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "gender")
-    private String gender;
+    private Gender gender;
 
     @Column(name = "birth_date")
     private LocalDate birthDate;
@@ -44,7 +46,7 @@ public class Candidate extends BaseModel {
     @Enumerated(EnumType.STRING)
     @Column(name = "status")
     private CandidateStatus status; // SCREENING, INTERVIEW, QUALIFIED, WAITING, ONBOARDED, REJECTED
-    
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "recruitment_id")
     private Recruitment recruitment;

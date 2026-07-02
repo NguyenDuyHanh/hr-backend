@@ -1,6 +1,7 @@
 package com.tlu.hrm.dto.request;
 
 import com.tlu.hrm.enums.CandidateStatus;
+import com.tlu.hrm.enums.Gender;
 import com.tlu.hrm.model.Candidate;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -18,7 +19,7 @@ public class CandidateDto {
     private LocalDateTime createDate;
     private String candidateCode;
     private String displayName;
-    private String gender;
+    private Gender gender;
     private LocalDate birthDate;
     private String email;
     private String phoneNumber;

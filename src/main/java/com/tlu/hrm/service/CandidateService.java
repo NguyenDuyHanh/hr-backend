@@ -1,7 +1,6 @@
 package com.tlu.hrm.service;
 
 import com.tlu.hrm.dto.request.CandidateDto;
-import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
 import com.tlu.hrm.enums.CandidateStatus;
 import org.springframework.data.domain.Page;
@@ -18,5 +17,4 @@ public interface CandidateService {
     boolean isValidCode(CandidateDto dto);
     String generateCode();
     Boolean updateStatus(UUID id, CandidateStatus status, String refusalReason);
-    StaffDto convertToReceivedJob(UUID id);
 }

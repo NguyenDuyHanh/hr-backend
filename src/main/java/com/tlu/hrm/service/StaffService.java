@@ -17,4 +17,5 @@ public interface StaffService {
     void deleteStaff(UUID id);
     boolean existsById(UUID id);
     String generateStaffCode();
+    byte[] exportStaffExcel(SearchDto searchDto);
 }

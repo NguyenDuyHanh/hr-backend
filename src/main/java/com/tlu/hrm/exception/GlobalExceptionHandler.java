@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException ex) {
-        StringBuilder errorMessage = new StringBuilder("Lỗi dữ liệu: ");
+        StringBuilder errorMessage = new StringBuilder("");
         ex.getBindingResult().getFieldErrors().forEach(error -> {
             errorMessage.append(error.getField())
                     .append(" ")
@@ -54,20 +54,21 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleHttpMessageNotReadableException(HttpMessageNotReadableException ex) {
+        ex.printStackTrace();
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Lỗi: Định dạng dữ liệu gửi lên không hợp lệ", HttpStatus.BAD_REQUEST));
+                .body(ApiResponse.error("Định dạng dữ liệu gửi lên không hợp lệ", HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
     public ResponseEntity<ApiResponse<Void>> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body(ApiResponse.error("Lỗi: Phương thức '" + ex.getMethod() + "' không được hỗ trợ cho endpoint này", HttpStatus.METHOD_NOT_ALLOWED));
+                .body(ApiResponse.error("Phương thức '" + ex.getMethod() + "' không được hỗ trợ cho endpoint này", HttpStatus.METHOD_NOT_ALLOWED));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error("Lỗi dữ liệu: " + ex.getMessage(), HttpStatus.BAD_REQUEST));
+                .body(ApiResponse.error(ex.getMessage(), HttpStatus.BAD_REQUEST));
     }
 
     @ExceptionHandler(Exception.class)

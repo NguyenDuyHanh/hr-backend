@@ -37,9 +37,15 @@ public class Timesheet extends BaseModel {
     @Column(name = "overtime_hours", nullable = false)
     private Double overtimeHours = 0.0;
 
+    @Column(name = "weekend_overtime_hours", nullable = false)
+    private Double weekendOvertimeHours = 0.0;
+
+    @Column(name = "holiday_overtime_hours", nullable = false)
+    private Double holidayOvertimeHours = 0.0;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
-    private TimesheetStatus status = TimesheetStatus.DRAFT;
+    private TimesheetStatus status = TimesheetStatus.SUBMITTED;
 
     @Column(name = "note")
     private String note;

@@ -16,4 +16,5 @@ public interface TimesheetService {
     boolean approve(UUID id, TimesheetStatus status, String note);
     void calculateTimesheet(UUID staffId, LocalDate date);
     List<TimesheetDto> getByStaffAndDateRange(UUID staffId, LocalDate start, LocalDate end);
+    byte[] exportTimesheetExcel(TimesheetSearchRequest request);
 }

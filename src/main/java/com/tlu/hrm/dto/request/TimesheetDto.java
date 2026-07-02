@@ -26,6 +26,8 @@ public class TimesheetDto {
     private Double totalWorkRatio;
     private Double standardHours;
     private Double overtimeHours;
+    private Double weekendOvertimeHours;
+    private Double holidayOvertimeHours;
     private TimesheetStatus status;
     private String note;
     private List<TimesheetDetailDto> details = new ArrayList<>();
@@ -49,6 +51,8 @@ public class TimesheetDto {
             this.totalWorkRatio = entity.getTotalWorkRatio();
             this.standardHours = entity.getStandardHours();
             this.overtimeHours = entity.getOvertimeHours();
+            this.weekendOvertimeHours = entity.getWeekendOvertimeHours();
+            this.holidayOvertimeHours = entity.getHolidayOvertimeHours();
             this.status = entity.getStatus();
             this.note = entity.getNote();
             if (entity.getDetails() != null) {
