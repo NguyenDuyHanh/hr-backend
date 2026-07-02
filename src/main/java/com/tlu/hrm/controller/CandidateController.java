@@ -1,7 +1,6 @@
 package com.tlu.hrm.controller;
 
 import com.tlu.hrm.dto.request.CandidateDto;
-import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.response.ApiResponse;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
 import com.tlu.hrm.enums.CandidateStatus;
@@ -87,11 +86,5 @@ public class CandidateController {
             @RequestParam(required = false) String refusalReason) {
         Boolean result = candidateService.updateStatus(id, status, refusalReason);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái ứng viên thành công", result));
-    }
-
-    @PostMapping("/{id}/convert-to-staff")
-    public ResponseEntity<ApiResponse<StaffDto>> convertToStaff(@PathVariable UUID id) {
-        StaffDto result = candidateService.convertToReceivedJob(id);
-        return ResponseEntity.ok(ApiResponse.success("Tiếp nhận ứng viên thành nhân viên thành công", result));
     }
 }

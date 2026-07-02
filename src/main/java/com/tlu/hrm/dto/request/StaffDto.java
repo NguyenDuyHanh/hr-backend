@@ -1,6 +1,8 @@
 package com.tlu.hrm.dto.request;
 
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.enums.WorkingStatus;
+import com.tlu.hrm.enums.Gender;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,10 +18,10 @@ public class StaffDto {
     private String staffCode;
     private String displayName;
     private LocalDate birthDate;
-    private String gender;
+    private Gender gender;
     private String phoneNumber;
     private String email;
-    private String workingStatus;
+    private WorkingStatus workingStatus;
     private String idNumber;
     private LocalDate startDate;
     private String currentAddress;

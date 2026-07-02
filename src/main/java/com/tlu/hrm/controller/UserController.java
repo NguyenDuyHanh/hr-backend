@@ -64,4 +64,16 @@ public class UserController {
         userService.deleteUser(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa người dùng thành công", null));
     }
+
+    @PutMapping("/{id}/lock")
+    public ResponseEntity<ApiResponse<UserDto>> lockUser(@PathVariable UUID id) {
+        UserDto result = userService.lockUser(id);
+        return ResponseEntity.ok(ApiResponse.success("Khóa tài khoản thành công", result));
+    }
+
+    @PutMapping("/{id}/unlock")
+    public ResponseEntity<ApiResponse<UserDto>> unlockUser(@PathVariable UUID id) {
+        UserDto result = userService.unlockUser(id);
+        return ResponseEntity.ok(ApiResponse.success("Mở khóa tài khoản thành công", result));
+    }
 }

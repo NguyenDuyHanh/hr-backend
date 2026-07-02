@@ -338,8 +338,8 @@ public class AiController {
         sb.append("\"displayName\":\"").append(escapeJson(foundStaff.getDisplayName())).append("\",");
         sb.append("\"email\":\"").append(escapeJson(foundStaff.getEmail())).append("\",");
         sb.append("\"phoneNumber\":\"").append(escapeJson(foundStaff.getPhoneNumber())).append("\",");
-        sb.append("\"gender\":\"").append(escapeJson(foundStaff.getGender())).append("\",");
-        sb.append("\"workingStatus\":\"").append(escapeJson(foundStaff.getWorkingStatus())).append("\",");
+        sb.append("\"gender\":\"").append(foundStaff.getGender() != null ? escapeJson(foundStaff.getGender().name()) : "").append("\",");
+        sb.append("\"workingStatus\":\"").append(foundStaff.getWorkingStatus() != null ? escapeJson(foundStaff.getWorkingStatus().name()) : "").append("\",");
         sb.append("\"birthDate\":\"").append(foundStaff.getBirthDate() != null ? foundStaff.getBirthDate().toString() : "—").append("\",");
         sb.append("\"startDate\":\"").append(foundStaff.getStartDate() != null ? foundStaff.getStartDate().toString() : "—").append("\",");
         sb.append("\"idNumber\":\"").append(foundStaff.getIdNumber() != null ? escapeJson(foundStaff.getIdNumber()) : "—").append("\",");
@@ -379,7 +379,7 @@ public class AiController {
                 String deptName = s.getDepartment() != null ? s.getDepartment().getName() : "—";
                 String posName = s.getPosition() != null ? s.getPosition().getName() : "—";
                 String email = s.getEmail() != null ? s.getEmail() : "—";
-                staffTable.append("| ").append(s.getStaffCode()).append(" | ").append(s.getDisplayName()).append(" | ").append(deptName).append(" | ").append(posName).append(" | ").append(email).append(" | ").append(s.getWorkingStatus() != null ? s.getWorkingStatus() : "—").append(" |\n");
+                staffTable.append("| ").append(s.getStaffCode()).append(" | ").append(s.getDisplayName()).append(" | ").append(deptName).append(" | ").append(posName).append(" | ").append(email).append(" | ").append(s.getWorkingStatus() != null ? s.getWorkingStatus().name() : "—").append(" |\n");
             }
 
             StringBuilder responseText = new StringBuilder();

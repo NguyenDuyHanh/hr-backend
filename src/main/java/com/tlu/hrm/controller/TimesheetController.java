@@ -63,4 +63,17 @@ public class TimesheetController {
         List<TimesheetDto> result = timesheetService.getByStaffAndDateRange(staffId, fromDate, toDate);
         return ResponseEntity.ok(ApiResponse.success("Lấy lịch sử chấm công nhân viên thành công", result));
     }
+
+    @PostMapping("/export-excel")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_TIMEKEEPING_MANAGER + "')")
+    public ResponseEntity<byte[]> exportTimesheetExcel(@RequestBody(required = false) TimesheetSearchRequest request) {
+        byte[] excelData = timesheetService.exportTimesheetExcel(request);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment",
+                java.net.URLEncoder.encode("BaoCaoCong.xlsx", java.nio.charset.StandardCharsets.UTF_8));
+
+        return ResponseEntity.ok().headers(headers).body(excelData);
+    }
 }

@@ -1,9 +1,9 @@
 package com.tlu.hrm.service.impl;
 
 import com.tlu.hrm.dto.request.CandidateDto;
-import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
 import com.tlu.hrm.enums.CandidateStatus;
+import com.tlu.hrm.enums.WorkingStatus;
 import com.tlu.hrm.exception.ResourceNotFoundException;
 import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
@@ -230,40 +230,5 @@ public class CandidateServiceImpl implements CandidateService {
         }
         candidateRepository.save(cand);
         return true;
-    }
-
-    @Override
-    public StaffDto convertToReceivedJob(UUID id) {
-        Candidate cand = candidateRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy ứng viên để tiếp nhận với ID: " + id));
-
-        if (cand.getStatus() == CandidateStatus.ONBOARDED) {
-            throw new RuntimeException("Ứng viên này đã được tiếp nhận thành nhân viên trước đó.");
-        }
-
-        Staff staff = new Staff();
-        staff.setStaffCode(staffService.generateStaffCode());
-        staff.setDisplayName(cand.getDisplayName());
-        staff.setGender(cand.getGender());
-        staff.setBirthDate(cand.getBirthDate());
-        staff.setEmail(cand.getEmail());
-        staff.setPhoneNumber(cand.getPhoneNumber());
-
-        staff.setCurrentResidence(cand.getAddress());
-        
-        staff.setDepartment(cand.getDepartment());
-        staff.setPosition(cand.getPosition());
-
-        staff.setStartDate(LocalDate.now());
-        staff.setWorkingStatus("Thử việc"); // Trạng thái ban đầu khi onboard
-
-        Staff savedStaff = staffRepository.save(staff);
-
-        // Cập nhật trạng thái ứng viên
-        cand.setStatus(CandidateStatus.ONBOARDED); // Đã onboard
-
-        candidateRepository.save(cand);
-
-        return new StaffDto(savedStaff);
     }
 }

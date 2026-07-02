@@ -89,5 +89,17 @@ public class StaffController {
         staffService.deleteStaff(id);
         return ResponseEntity.ok(ApiResponse.success("Xóa nhân viên thành công", null));
     }
+
+    @PostMapping("/export-excel")
+    public ResponseEntity<byte[]> exportStaffExcel(@RequestBody(required = false) SearchDto searchDto) {
+        byte[] excelData = staffService.exportStaffExcel(searchDto);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment",
+                java.net.URLEncoder.encode("DanhSachNhanVien.xlsx", java.nio.charset.StandardCharsets.UTF_8));
+
+        return ResponseEntity.ok().headers(headers).body(excelData);
+    }
 }
 

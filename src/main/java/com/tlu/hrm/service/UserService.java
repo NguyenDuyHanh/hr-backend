@@ -15,4 +15,6 @@ public interface UserService {
     UserDto saveUser(UserDto userDto);
     void deleteUser(UUID id);
     boolean existsById(UUID id);
+    UserDto lockUser(UUID id);
+    UserDto unlockUser(UUID id);
 }

@@ -36,7 +36,7 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL)")
     long countAllActiveStaff();
 
-    @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL) AND s.workingStatus = '7'")
+    @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL) AND s.workingStatus = com.tlu.hrm.enums.WorkingStatus.ACTIVE")
     long countWorkingStaff();
 
     @Query("SELECT COUNT(s) FROM Staff s WHERE (s.isDeleted = false OR s.isDeleted IS NULL) AND s.startDate BETWEEN :startDate AND :endDate")

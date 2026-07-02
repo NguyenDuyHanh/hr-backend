@@ -4,6 +4,7 @@ import com.tlu.hrm.dto.response.DashboardSummaryResponse;
 import com.tlu.hrm.enums.CandidateStatus;
 import com.tlu.hrm.enums.LeaveApprovalStatus;
 import com.tlu.hrm.enums.TimesheetStatus;
+import com.tlu.hrm.enums.WorkingStatus;
 import com.tlu.hrm.model.Department;
 import com.tlu.hrm.model.LeaveRequest;
 import com.tlu.hrm.model.Project;
@@ -96,7 +97,7 @@ public class DashboardServiceImpl implements DashboardService {
                         // Resignations calculation: count active/deleted staff who had workingStatus =
                         // "5" (Resigned) in that month
                         long resignations = staffRepository.findAll().stream()
-                                        .filter(s -> "5".equals(s.getWorkingStatus()))
+                                        .filter(s -> WorkingStatus.RESIGNED == s.getWorkingStatus())
                                         .filter(s -> {
                                                 LocalDate changeDate = s.getModifyDate() != null
                                                                 ? s.getModifyDate().toLocalDate()

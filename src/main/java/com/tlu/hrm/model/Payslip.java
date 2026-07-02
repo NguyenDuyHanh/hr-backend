@@ -32,6 +32,12 @@ public class Payslip extends BaseModel {
     @Column(name = "total_ot_hours", nullable = false)
     private Double totalOtHours = 0.0;
 
+    @Column(name = "total_weekend_ot_hours", nullable = false)
+    private Double totalWeekendOtHours = 0.0;
+
+    @Column(name = "total_holiday_ot_hours", nullable = false)
+    private Double totalHolidayOtHours = 0.0;
+
     @Column(name = "total_income", nullable = false)
     private Double totalIncome = 0.0;
 

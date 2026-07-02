@@ -41,10 +41,14 @@ public class PayslipServiceImpl implements PayslipService {
 
         double totalWorkDays = 0.0;
         double totalOtHours = 0.0;
+        double totalWeekendOtHours = 0.0;
+        double totalHolidayOtHours = 0.0;
 
         for (Timesheet ts : timesheets) {
             totalWorkDays += ts.getTotalWorkRatio() != null ? ts.getTotalWorkRatio() : 0.0;
             totalOtHours += ts.getOvertimeHours() != null ? ts.getOvertimeHours() : 0.0;
+            totalWeekendOtHours += ts.getWeekendOvertimeHours() != null ? ts.getWeekendOvertimeHours() : 0.0;
+            totalHolidayOtHours += ts.getHolidayOvertimeHours() != null ? ts.getHolidayOvertimeHours() : 0.0;
         }
 
         // 2. Tạo đối tượng Payslip
@@ -53,6 +57,8 @@ public class PayslipServiceImpl implements PayslipService {
         payslip.setStaff(staff);
         payslip.setTotalWorkDays(totalWorkDays);
         payslip.setTotalOtHours(totalOtHours);
+        payslip.setTotalWeekendOtHours(totalWeekendOtHours);
+        payslip.setTotalHolidayOtHours(totalHolidayOtHours);
         payslip.setPaidStatus(PaidStatus.UNPAID);
 
         double totalIncome = 0.0;
@@ -88,7 +94,10 @@ public class PayslipServiceImpl implements PayslipService {
                 }
                 amount = baseSalary; // Lưu lương cơ bản gốc làm căn cứ tính OT
                 if (standardWorkDays > 0) {
-                    calculatedValue = (baseSalary / standardWorkDays / 8.0) * 1.5 * totalOtHours;
+                    double hourlyRate = baseSalary / standardWorkDays / 8.0;
+                    calculatedValue = (hourlyRate * 1.5 * totalOtHours)
+                                    + (hourlyRate * 2.0 * totalWeekendOtHours)
+                                    + (hourlyRate * 3.0 * totalHolidayOtHours);
                 } else {
                     calculatedValue = 0.0;
                 }
