@@ -154,14 +154,13 @@ public class TaskServiceImpl implements TaskService {
             }
         }
 
-        if (request.getAssigneeId() != null) {
-            Staff assignee = staffRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException(
-                            "Không tìm thấy nhân viên phụ trách với ID: " + request.getAssigneeId()));
-            task.setAssignee(assignee);
-        } else {
-            task.setAssignee(null);
+        if (request.getAssigneeId() == null) {
+            throw new IllegalArgumentException("Người phụ trách không được để trống");
         }
+        Staff assignee = staffRepository.findById(request.getAssigneeId())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Không tìm thấy nhân viên phụ trách với ID: " + request.getAssigneeId()));
+        task.setAssignee(assignee);
 
 
 

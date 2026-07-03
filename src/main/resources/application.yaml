@@ -18,7 +18,7 @@ spring:
 
 groq:
   api:
-    key: ${GROQ_API_KEY:}
+    key: ${GROQ_API_KEY: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}
 
 jwt:
   expiration: 300000          # 5 phút (5 * 60 * 1000 ms)

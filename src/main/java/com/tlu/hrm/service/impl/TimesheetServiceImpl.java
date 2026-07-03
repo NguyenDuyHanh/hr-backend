@@ -271,10 +271,9 @@ public class TimesheetServiceImpl implements TimesheetService {
                     for (TimesheetDetail d : timesheet.getDetails()) {
                         totalRatio += d.getWorkRatio() != null ? d.getWorkRatio() : 0.0;
                     }
-                    timesheet.setTotalWorkRatio(totalRatio);
-                    timesheet.setStandardHours(calculateStandardHours(timesheet.getDetails()));
+                    double stdHours = calculateStandardHours(timesheet.getDetails());
                     double otHours = calculateOvertimeHours(timesheet.getDetails());
-                    setOvertimeHoursByDate(timesheet, date, otHours);
+                    finalizeTimesheetHours(timesheet, date, totalRatio, stdHours, otHours);
                     timesheet.setStatus(TimesheetStatus.APPROVED);
                     timesheet.setNote(
                             "Nghỉ nửa ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
@@ -294,6 +293,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                 leaveDetail.setTimesheet(timesheet);
                 ShiftWork fullDayShift = shiftWorkRepository.findByCode("CA_CA_NGAY").orElse(null);
                 leaveDetail.setShift(fullDayShift);
+                if (fullDayShift != null) {
+                    leaveDetail.setCheckInTime(date.atTime(fullDayShift.getStartTime()));
+                    leaveDetail.setCheckOutTime(date.atTime(fullDayShift.getEndTime()));
+                }
                 leaveDetail.setWorkRatio(isPaid ? 1.0 : 0.0);
                 leaveDetail.setLateMinutes(0);
                 leaveDetail.setEarlyMinutes(0);
@@ -509,11 +512,9 @@ public class TimesheetServiceImpl implements TimesheetService {
             }
         }
 
-        timesheet.setTotalWorkRatio(totalRatio);
         double stdHours = calculateStandardHours(timesheet.getDetails());
         double otHours = calculateOvertimeHours(timesheet.getDetails());
-        timesheet.setStandardHours(stdHours);
-        setOvertimeHoursByDate(timesheet, date, otHours);
+        finalizeTimesheetHours(timesheet, date, totalRatio, stdHours, otHours);
         timesheetRepository.save(timesheet);
     }
 
@@ -584,19 +585,34 @@ public class TimesheetServiceImpl implements TimesheetService {
         return false;
     }
 
-    private void setOvertimeHoursByDate(Timesheet timesheet, LocalDate date, double otHours) {
+    private void finalizeTimesheetHours(Timesheet timesheet, LocalDate date, double totalRatio, double stdHours, double otHours) {
         boolean isHoliday = isHoliday(date);
-        boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+        boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
         if (isHoliday) {
-            timesheet.setHolidayOvertimeHours(otHours);
+            double totalOt = stdHours + otHours;
+            timesheet.setTotalWorkRatio(1.0); // Holiday pay (x1.0 standard pay)
+            timesheet.setStandardHours(0.0);
+            timesheet.setHolidayOvertimeHours(totalOt); // Work hours paid at x3.0
             timesheet.setWeekendOvertimeHours(0.0);
             timesheet.setOvertimeHours(0.0);
         } else if (isWeekend) {
+            double totalOt = stdHours + otHours;
+            timesheet.setTotalWorkRatio(0.0); // Weekend rest day, no standard day pay (x1.0)
+            timesheet.setStandardHours(0.0);
             timesheet.setHolidayOvertimeHours(0.0);
-            timesheet.setWeekendOvertimeHours(otHours);
+            timesheet.setWeekendOvertimeHours(totalOt); // Work hours paid at x2.0
             timesheet.setOvertimeHours(0.0);
+
+            // Set workRatio of details to 0.0 for weekends
+            if (timesheet.getDetails() != null) {
+                for (TimesheetDetail d : timesheet.getDetails()) {
+                    d.setWorkRatio(0.0);
+                }
+            }
         } else {
+            timesheet.setTotalWorkRatio(totalRatio);
+            timesheet.setStandardHours(stdHours);
             timesheet.setHolidayOvertimeHours(0.0);
             timesheet.setWeekendOvertimeHours(0.0);
             timesheet.setOvertimeHours(otHours);
@@ -1083,6 +1099,35 @@ public class TimesheetServiceImpl implements TimesheetService {
 
         } catch (IOException e) {
             throw new RuntimeException("Lỗi tạo file Excel: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    @Transactional
+    public void initHolidayTimesheets(UUID staffId, LocalDate start, LocalDate end) {
+        if (staffId == null || start == null || end == null || start.isAfter(end)) {
+            return;
+        }
+        Staff staff = staffRepository.findById(staffId)
+                .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại"));
+
+        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
+            if (isHoliday(date)) {
+                boolean exists = timesheetRepository.findByStaffIdAndWorkingDate(staffId, date).isPresent();
+                if (!exists) {
+                    Timesheet timesheet = new Timesheet();
+                    timesheet.setStaff(staff);
+                    timesheet.setWorkingDate(date);
+                    timesheet.setTotalWorkRatio(1.0);
+                    timesheet.setStandardHours(8.0);
+                    timesheet.setStatus(TimesheetStatus.APPROVED);
+                    timesheet.setNote("Nghỉ lễ hưởng nguyên lương");
+                    timesheet.setOvertimeHours(0.0);
+                    timesheet.setWeekendOvertimeHours(0.0);
+                    timesheet.setHolidayOvertimeHours(0.0);
+                    timesheetRepository.save(timesheet);
+                }
+            }
         }
     }
 }

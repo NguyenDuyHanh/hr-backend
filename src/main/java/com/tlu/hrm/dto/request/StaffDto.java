@@ -26,6 +26,7 @@ public class StaffDto {
     private LocalDate startDate;
     private String currentAddress;
     private String socialInsuranceCode;
+    private Double annualLeave;
     
     // IDs for linked entities
     private UUID departmentId;
@@ -72,6 +73,7 @@ public class StaffDto {
             this.startDate = entity.getStartDate();
             this.currentAddress = entity.getCurrentAddress();
             this.socialInsuranceCode = entity.getSocialInsuranceCode();
+            this.annualLeave = entity.getAnnualLeave();
             if (entity.getDepartment() != null) {
                 this.departmentId = entity.getDepartment().getId();
                 this.departmentName = entity.getDepartment().getName();

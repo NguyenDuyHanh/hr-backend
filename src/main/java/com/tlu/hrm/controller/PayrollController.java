@@ -80,6 +80,13 @@ public class PayrollController {
         return ResponseEntity.ok(ApiResponse.success("Xác nhận bảng lương thành công", result));
     }
 
+    @PutMapping("/{id}/unconfirm")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
+    public ResponseEntity<ApiResponse<Payroll>> unconfirmPayroll(@PathVariable UUID id) {
+        Payroll result = payrollService.unconfirmPayroll(id);
+        return ResponseEntity.ok(ApiResponse.success("Hủy xác nhận bảng lương thành công", result));
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
     public ResponseEntity<ApiResponse<Void>> deletePayroll(@PathVariable UUID id) {

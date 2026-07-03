@@ -5,11 +5,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.tlu.hrm.dto.request.AiChatRequest;
 import com.tlu.hrm.model.Department;
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.model.User;
 import com.tlu.hrm.repository.DepartmentRepository;
 import com.tlu.hrm.repository.StaffRepository;
+import com.tlu.hrm.security.SecurityUtils;
+import com.tlu.hrm.service.ai.impl.AiServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
@@ -26,6 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/chat")
 @CrossOrigin(origins = "*")
+@PreAuthorize("isAuthenticated()")
 public class AiController {
 
     @Autowired
@@ -34,18 +39,29 @@ public class AiController {
     @Autowired
     private DepartmentRepository departmentRepository;
 
+    @Autowired
+    private AiServiceImpl aiService;
+
+    @Autowired
+    private SecurityUtils securityUtils;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Value("${groq.api.key:}")
+    @Value("${groq.api.key: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}")
     private String defaultApiKey;
 
     @PostMapping
     public ResponseEntity<StreamingResponseBody> chat(@RequestBody AiChatRequest request) {
-        String apiKey = (request.getApiKey() != null && !request.getApiKey().trim().isEmpty()) 
+        String tempApiKey = (request.getApiKey() != null && !request.getApiKey().trim().isEmpty()) 
                 ? request.getApiKey().trim() : defaultApiKey;
+                
+        final String apiKey = (tempApiKey == null || tempApiKey.trim().isEmpty()) 
+                ? "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" : tempApiKey;
                 
         String model = (request.getModel() != null && !request.getModel().trim().isEmpty()) 
                 ? request.getModel().trim() : "llama-3.3-70b-versatile";
+
+        User currentUser = securityUtils.getCurrentUser();
 
         StreamingResponseBody responseBody = outputStream -> {
             try {
@@ -53,44 +69,13 @@ public class AiController {
                     throw new RuntimeException("API Key is missing");
                 }
 
-                // 1. Build a clean, token-efficient system prompt instructing AI on tool usage
+                // 1. Build dynamic system prompt
                 String systemPrompt = buildSystemPrompt();
 
-                // 2. Define the tools array metadata for getStaffProfile and getEmployeeCount
-                String toolsJson = """
-                [
-                  {
-                    "type": "function",
-                    "function": {
-                      "name": "getStaffProfile",
-                      "description": "Lấy thông tin hồ sơ chi tiết của một nhân viên cụ thể theo mã số nhân viên (staffCode).",
-                      "parameters": {
-                        "type": "object",
-                        "properties": {
-                          "staffCode": {
-                            "type": "string",
-                            "description": "Mã số nhân viên cần tra cứu (ví dụ: NV001, NV002)."
-                          }
-                        },
-                        "required": ["staffCode"]
-                      }
-                    }
-                  },
-                  {
-                    "type": "function",
-                    "function": {
-                      "name": "getEmployeeCount",
-                      "description": "Lấy tổng số lượng nhân viên/nhân sự hiện có trong toàn hệ thống quản lý.",
-                      "parameters": {
-                        "type": "object",
-                        "properties": {}
-                      }
-                    }
-                  }
-                ]
-                """;
+                // 2. Fetch tool configurations dynamically from service
+                String toolsJson = aiService.buildToolsJsonMetadata();
 
-                // 3. Build payload for Phase 1 (Non-streaming to detect tool call)
+                // 3. Build payload for Phase 1
                 StringBuilder payloadBuilder = new StringBuilder();
                 payloadBuilder.append("{\"model\":\"").append(escapeJson(model)).append("\",\"messages\":[");
                 
@@ -150,21 +135,13 @@ public class AiController {
                             String funcName = toolCall.get("function").get("name").asText();
                             String argumentsStr = toolCall.get("function").get("arguments").asText();
 
-                            // Execute local Java tool execution
-                            String toolResult = "";
+                            // Execute AI tool through registration service
                             System.out.println("\n--- [AI TOOL CALL DETECTED] ---");
                             System.out.println("-> Tool Name: " + funcName);
                             System.out.println("-> Arguments: " + argumentsStr);
-                             
-                            if ("getStaffProfile".equals(funcName)) {
-                                JsonNode argsNode = objectMapper.readTree(argumentsStr);
-                                String staffCode = argsNode.has("staffCode") ? argsNode.get("staffCode").asText() : "";
-                                System.out.println("-> Executing local method: getStaffProfile(\"" + staffCode + "\")");
-                                toolResult = executeGetStaffProfile(staffCode);
-                            } else if ("getEmployeeCount".equals(funcName)) {
-                                System.out.println("-> Executing local method: getEmployeeCount()");
-                                toolResult = executeGetEmployeeCount();
-                            }
+                            
+                            String toolResult = aiService.executeTool(funcName, argumentsStr, currentUser);
+                            
                             System.out.println("-> Result Returned to AI: " + toolResult);
                             System.out.println("--------------------------------\n");
 
@@ -209,7 +186,7 @@ public class AiController {
                         }
                     }
                     
-                    // If no tool call, stream the content of the messageNode directly with smooth typing simulation
+                    // If no tool call, stream the content directly
                     String directContent = (messageNode != null && messageNode.has("content") && !messageNode.get("content").isNull()) 
                             ? messageNode.get("content").asText() : "";
                     
@@ -227,7 +204,6 @@ public class AiController {
             } catch (Exception e) {
                 System.err.println("=== [AI CHAT ERROR] ===");
                 e.printStackTrace();
-                // FALLBACK: If anything fails, trigger the robust local query handler
                 executeLocalFallback(request, outputStream);
             }
         };
@@ -314,48 +290,6 @@ public class AiController {
         }
     }
 
-    private String executeGetStaffProfile(String staffCode) {
-        if (staffCode == null || staffCode.trim().isEmpty()) {
-            return "{\"error\": \"Mã nhân viên không hợp lệ\"}";
-        }
-        
-        List<Staff> staffs = staffRepository.findAll();
-        Staff foundStaff = null;
-        for (Staff s : staffs) {
-            if (s.getStaffCode() != null && s.getStaffCode().trim().equalsIgnoreCase(staffCode.trim())) {
-                foundStaff = s;
-                break;
-            }
-        }
-        
-        if (foundStaff == null) {
-            return "{\"status\": \"error\", \"message\": \"Không tìm thấy nhân viên với mã: " + staffCode + "\"}";
-        }
-        
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        sb.append("\"staffCode\":\"").append(escapeJson(foundStaff.getStaffCode())).append("\",");
-        sb.append("\"displayName\":\"").append(escapeJson(foundStaff.getDisplayName())).append("\",");
-        sb.append("\"email\":\"").append(escapeJson(foundStaff.getEmail())).append("\",");
-        sb.append("\"phoneNumber\":\"").append(escapeJson(foundStaff.getPhoneNumber())).append("\",");
-        sb.append("\"gender\":\"").append(foundStaff.getGender() != null ? escapeJson(foundStaff.getGender().name()) : "").append("\",");
-        sb.append("\"workingStatus\":\"").append(foundStaff.getWorkingStatus() != null ? escapeJson(foundStaff.getWorkingStatus().name()) : "").append("\",");
-        sb.append("\"birthDate\":\"").append(foundStaff.getBirthDate() != null ? foundStaff.getBirthDate().toString() : "—").append("\",");
-        sb.append("\"startDate\":\"").append(foundStaff.getStartDate() != null ? foundStaff.getStartDate().toString() : "—").append("\",");
-        sb.append("\"idNumber\":\"").append(foundStaff.getIdNumber() != null ? escapeJson(foundStaff.getIdNumber()) : "—").append("\",");
-        sb.append("\"currentAddress\":\"").append(foundStaff.getCurrentAddress() != null ? escapeJson(foundStaff.getCurrentAddress()) : "—").append("\",");
-        sb.append("\"socialInsuranceCode\":\"").append(foundStaff.getSocialInsuranceCode() != null ? escapeJson(foundStaff.getSocialInsuranceCode()) : "—").append("\",");
-        sb.append("\"department\":\"").append(foundStaff.getDepartment() != null ? escapeJson(foundStaff.getDepartment().getName()) : "—").append("\",");
-        sb.append("\"position\":\"").append(foundStaff.getPosition() != null ? escapeJson(foundStaff.getPosition().getName()) : "—").append("\"");
-        sb.append("}");
-        return sb.toString();
-    }
-
-    private String executeGetEmployeeCount() {
-        long count = staffRepository.count();
-        return "{\"status\": \"success\", \"totalEmployees\": " + count + "}";
-    }
-
     private void executeLocalFallback(AiChatRequest request, OutputStream outputStream) {
         try {
             String lastQuery = "";
@@ -373,34 +307,21 @@ public class AiController {
                 deptTable.append("| ").append(d.getCode()).append(" | ").append(d.getName()).append(" | ").append(d.getDescription() != null ? d.getDescription() : "—").append(" |\n");
             }
 
-            StringBuilder staffTable = new StringBuilder();
-            staffTable.append("| Mã NV | Họ và tên | Phòng ban | Chức danh | Email | Trạng thái |\n|---|---|---|---|---|---|\n");
-            for (Staff s : staffRepository.findAll()) {
-                String deptName = s.getDepartment() != null ? s.getDepartment().getName() : "—";
-                String posName = s.getPosition() != null ? s.getPosition().getName() : "—";
-                String email = s.getEmail() != null ? s.getEmail() : "—";
-                staffTable.append("| ").append(s.getStaffCode()).append(" | ").append(s.getDisplayName()).append(" | ").append(deptName).append(" | ").append(posName).append(" | ").append(email).append(" | ").append(s.getWorkingStatus() != null ? s.getWorkingStatus().name() : "—").append(" |\n");
-            }
-
             StringBuilder responseText = new StringBuilder();
-            responseText.append("*(Hệ thống đang hoạt động ở chế độ **Tra cứu Trực tiếp**)*\n\n");
+            responseText.append("*(Hệ thống đang hoạt động ở chế độ **Tra cứu Trực tiếp** do API AI bận)*\n\n");
 
             if (lastQuery.contains("hello") || lastQuery.contains("chào") || lastQuery.contains("hi")) {
                 responseText.append("👋 **Xin chào!** Tôi là Trợ lý AI HRM.\n\n");
                 responseText.append("Hiện tại hệ thống đã chuẩn bị sẵn sàng dữ liệu của **").append(totalDepts).append(" Phòng ban** và **").append(totalStaffs).append(" Nhân sự**.\n\n");
                 responseText.append("💡 **Hướng dẫn tra cứu nhanh**:\n");
                 responseText.append("- Gõ **'phòng ban'** để xem toàn bộ cơ cấu tổ chức.\n");
-                responseText.append("- Gõ **'nhân viên'** để xem danh sách hồ sơ chi tiết.\n");
-                responseText.append("- Hoặc nhấp vào biểu tượng cài đặt ⚙️ ở trên để cấu hình API Key giúp AI đàm thoại tự nhiên!");
+                responseText.append("- Gõ **'nhân viên'** để tìm kiếm.\n");
             } else if (lastQuery.contains("phòng ban") || lastQuery.contains("cơ cấu")) {
                 responseText.append("🏢 **DANH SÁCH PHÒNG BAN HIỆN CÓ**:\n\n");
                 responseText.append(deptTable.toString());
-            } else if (lastQuery.contains("nhân viên") || lastQuery.contains("nhân sự") || lastQuery.contains("toàn bộ")) {
-                responseText.append("👥 **DANH SÁCH NHÂN SỰ TOÀN BỘ**:\n\n");
-                responseText.append(staffTable.toString());
             } else {
                 responseText.append("📌 **Kết quả cho từ khóa:** '").append(lastQuery).append("'\n\n");
-                responseText.append("Hệ thống hiện quản lý **").append(totalStaffs).append(" nhân sự** và **").append(totalDepts).append(" phòng ban**. Vui lòng gõ cụ thể **'phòng ban'** hoặc **'nhân viên'** để xuất bảng dữ liệu tương ứng.");
+                responseText.append("Hệ thống hiện quản lý **").append(totalStaffs).append(" nhân sự** và **").append(totalDepts).append(" phòng ban**.");
             }
 
             String safeToken = escapeJson(responseText.toString());
@@ -421,15 +342,19 @@ public class AiController {
     private String buildSystemPrompt() {
         StringBuilder sb = new StringBuilder();
         sb.append("Bạn là Trợ lý AI của hệ thống Quản lý Nhân sự (HRM).\n");
-        sb.append("Nhiệm vụ của bạn là hỗ trợ tra cứu thông tin nhân sự và số lượng nhân sự trong hệ thống. Bạn được cung cấp các công cụ (tools) chuyên dụng:\n");
-        sb.append("- Sử dụng 'getStaffProfile' khi người dùng muốn xem thông tin chi tiết, email, số điện thoại, phòng ban, chức danh của một nhân sự cụ thể theo mã nhân viên.\n");
-        sb.append("- Sử dụng 'getEmployeeCount' khi người dùng muốn biết tổng số lượng nhân sự hiện có trong toàn hệ thống.\n");
+        sb.append("Nhiệm vụ của bạn là hỗ trợ tra cứu thông tin nhân sự, phòng ban, công việc/dự án, nghỉ phép, phiếu lương trong hệ thống. Bạn được cung cấp các công cụ (tools) chuyên dụng:\n");
+        sb.append("- Sử dụng 'getStaffProfile' khi muốn xem thông tin hồ sơ chi tiết của một nhân viên cụ thể theo mã số nhân viên.\n");
+        sb.append("- Sử dụng 'getEmployeeCount' khi muốn biết tổng số lượng nhân sự trong hệ thống.\n");
+        sb.append("- Sử dụng 'searchStaff' khi muốn tìm kiếm, lọc danh sách nhân viên theo tên, phòng ban (ví dụ: IT, Nhân sự), chức danh.\n");
+        sb.append("- Sử dụng 'getDepartments' khi muốn xem danh sách các phòng ban hiện có.\n");
+        sb.append("- Sử dụng 'getMyProjects' khi người dùng muốn xem danh sách các dự án tham gia.\n");
+        sb.append("- Sử dụng 'getMyTasks' khi muốn xem các công việc/nhiệm vụ (có thể lọc theo dự án).\n");
+        sb.append("- Sử dụng 'getMyLeaveRequests' khi muốn xem lịch sử hoặc danh sách đơn nghỉ phép.\n");
+        sb.append("- Sử dụng 'getMyLeaveBalance' khi muốn xem số dư ngày nghỉ phép năm còn lại.\n");
+        sb.append("- Sử dụng 'getMyPayslips' khi người dùng muốn tra cứu phiếu lương/lịch sử nhận lương.\n\n");
         sb.append("Khi thực hiện gọi công cụ, hãy điền đúng tham số và không thêm bất kỳ văn bản giải thích nào ngoài lệnh gọi công cụ.\n");
         sb.append("Khi trả lời người dùng, hãy trình bày bằng tiếng Việt, định dạng Markdown chuyên nghiệp, trực quan, có cấu trúc rõ ràng.\n");
-        sb.append("HÃY TRẢ LỜI TẬP TRUNG VÀ ĐÚNG TRỌNG TÂM: Nếu người dùng chỉ hỏi một vài thông tin cụ thể của đối tượng, hãy chỉ trả lời trực tiếp các thông tin được hỏi đó. Không tự ý hiển thị toàn bộ hồ sơ hoặc chi tiết đối tượng trừ khi người dùng yêu cầu xem chi tiết.\n");
-        sb.append("ĐỐI VỚI DỮ LIỆU RỖNG HOẶC KHÔNG TỒN TẠI:\n");
-        sb.append("- Nếu đối tượng (nhân viên, phòng ban, v.v.) có tồn tại nhưng trường thông tin cụ thể được hỏi trả về giá trị trống hoặc rỗng, hãy trả lời lịch sự rằng thông tin này 'chưa được cập nhật trên hệ thống'.\n");
-        sb.append("- Chỉ phản hồi không tìm thấy đối tượng nếu mã hoặc thông tin định danh của đối tượng đó hoàn toàn không tồn tại trong cơ sở dữ liệu.\n");
+        sb.append("Lưu ý về bảo mật (RBAC): Các công cụ của bạn đã được thiết lập để tự động lọc kết quả phù hợp với quyền hạn của tài khoản đang trò chuyện. Hãy tự tin trả lời dựa trên kết quả trả về từ công cụ.\n");
         sb.append("Tuyệt đối KHÔNG tự sáng tạo hoặc bịa đặt ra bất kỳ thông tin và số liệu giả nào.\n\n");
 
         // Inject Real-time Clock Info dynamically

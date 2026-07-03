@@ -20,6 +20,8 @@ public interface PayrollService {
 
     Payroll confirmPayroll(UUID payrollId);
 
+    Payroll unconfirmPayroll(UUID payrollId);
+
     void deletePayroll(UUID payrollId);
 
     Payslip getMyPayslip(UUID periodId, User currentUser);
