@@ -7,13 +7,17 @@ import com.tlu.hrm.service.BankTransferQrService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import static com.tlu.hrm.enums.RoleType.Constants.*;
 
 @RestController
 @RequestMapping("/api/bank-transfer/qr")
 @Validated
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
 public class BankTransferQrController {
 
     @Autowired

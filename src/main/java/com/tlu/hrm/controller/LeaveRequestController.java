@@ -34,16 +34,19 @@ public class LeaveRequestController {
     public ResponseEntity<ApiResponse<Page<LeaveRequestDto>>> search(@RequestBody LeaveRequestSearchRequest request) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
         }
 
         // Nếu là nhân viên thường, chỉ cho phép xem đơn của chính mình
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly) {
             if (currentUser.getStaff() == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Tài khoản chưa liên kết với nhân sự", HttpStatus.BAD_REQUEST));
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Tài khoản chưa liên kết với nhân sự", HttpStatus.BAD_REQUEST));
             }
             request.setStaffId(currentUser.getStaff().getId());
         }
@@ -62,10 +65,12 @@ public class LeaveRequestController {
 
         User currentUser = securityUtils.getCurrentUser();
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly && !result.getRequestStaffId().equals(currentUser.getStaff().getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Bạn không có quyền xem đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ApiResponse.error("Bạn không có quyền xem đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
         }
 
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết đơn nghỉ phép thành công", result));
@@ -76,15 +81,18 @@ public class LeaveRequestController {
     public ResponseEntity<ApiResponse<LeaveRequestDto>> create(@RequestBody LeaveRequestDto dto) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
         }
 
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly) {
             if (currentUser.getStaff() == null) {
-                return ResponseEntity.badRequest().body(ApiResponse.error("Tài khoản chưa liên kết với nhân sự", HttpStatus.BAD_REQUEST));
+                return ResponseEntity.badRequest()
+                        .body(ApiResponse.error("Tài khoản chưa liên kết với nhân sự", HttpStatus.BAD_REQUEST));
             }
             // Nhân viên thường chỉ được tạo đơn cho chính mình
             dto.setRequestStaffId(currentUser.getStaff().getId());
@@ -96,10 +104,12 @@ public class LeaveRequestController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_EMPLOYEE + "')")
-    public ResponseEntity<ApiResponse<LeaveRequestDto>> update(@PathVariable UUID id, @RequestBody LeaveRequestDto dto) {
+    public ResponseEntity<ApiResponse<LeaveRequestDto>> update(@PathVariable UUID id,
+            @RequestBody LeaveRequestDto dto) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
         }
 
         LeaveRequestDto existing = leaveRequestService.getById(id);
@@ -108,11 +118,13 @@ public class LeaveRequestController {
         }
 
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly) {
             if (!existing.getRequestStaffId().equals(currentUser.getStaff().getId())) {
-                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Bạn không có quyền sửa đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                        ApiResponse.error("Bạn không có quyền sửa đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
             }
             // Không cho phép nhân viên thường tự ý thay đổi requestStaffId
             dto.setRequestStaffId(currentUser.getStaff().getId());
@@ -127,7 +139,8 @@ public class LeaveRequestController {
     public ResponseEntity<ApiResponse<Void>> delete(@PathVariable UUID id) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
         }
 
         LeaveRequestDto existing = leaveRequestService.getById(id);
@@ -136,10 +149,12 @@ public class LeaveRequestController {
         }
 
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly && !existing.getRequestStaffId().equals(currentUser.getStaff().getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Bạn không có quyền xóa đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                    ApiResponse.error("Bạn không có quyền xóa đơn nghỉ phép của người khác", HttpStatus.FORBIDDEN));
         }
 
         leaveRequestService.delete(id);
@@ -171,14 +186,17 @@ public class LeaveRequestController {
             @PathVariable int year) {
         User currentUser = securityUtils.getCurrentUser();
         if (currentUser == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("Người dùng chưa đăng nhập", HttpStatus.UNAUTHORIZED));
         }
 
         boolean isEmployeeOnly = currentUser.getUserRoles().stream()
-                .noneMatch(ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
+                .noneMatch(
+                        ur -> ROLE_ADMIN.equals(ur.getRole().getName()) || HR_MANAGER.equals(ur.getRole().getName()));
 
         if (isEmployeeOnly && !staffId.equals(currentUser.getStaff().getId())) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiResponse.error("Bạn không có quyền xem số dư phép của người khác", HttpStatus.FORBIDDEN));
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(ApiResponse.error("Bạn không có quyền xem số dư phép của người khác", HttpStatus.FORBIDDEN));
         }
 
         StaffAnnualLeaveBalanceDto result = leaveRequestService.getLeaveBalance(staffId, year);

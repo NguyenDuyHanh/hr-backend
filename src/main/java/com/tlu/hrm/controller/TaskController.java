@@ -39,6 +39,12 @@ public class TaskController {
     @Autowired
     private TaskAttachmentRepository taskAttachmentRepository;
 
+    @Autowired
+    private com.tlu.hrm.utils.ProjectUtils projectUtils;
+
+    @Autowired
+    private com.tlu.hrm.security.SecurityUtils securityUtils;
+
     @PostMapping("/paging")
     @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectAccess(#request?.projectId)")
     public ResponseEntity<ApiResponse<Page<TaskResponse>>> searchTasks(
@@ -176,5 +182,38 @@ public class TaskController {
         ApiResponse<TaskAttachmentResponse> response = ApiResponse.success("Lưu tập tin đính kèm thành công",
                 new TaskAttachmentResponse(savedAttachment));
         return ResponseEntity.ok(response);
+    }
+
+    @DeleteMapping("/attachments/{attachmentId}")
+    public ResponseEntity<ApiResponse<Void>> deleteAttachment(@PathVariable UUID attachmentId) {
+        TaskAttachment attachment = taskAttachmentRepository.findById(attachmentId)
+                .filter(a -> a.getIsDeleted() == null || !a.getIsDeleted())
+                .orElseThrow(
+                        () -> new ResourceNotFoundException("Không tìm thấy tệp đính kèm với ID: " + attachmentId));
+
+        // Authorization check
+        com.tlu.hrm.model.User currentUser = securityUtils.getCurrentUser();
+        boolean isManager = securityUtils.isManagerOrAdmin(currentUser);
+        if (!isManager) {
+            Task task = attachment.getTask();
+            if (task == null || task.getProject() == null
+                    || !projectUtils.hasProjectAccess(task.getProject().getId())) {
+                throw new org.springframework.security.access.AccessDeniedException(
+                        "Bạn không có quyền xóa tệp đính kèm của công việc này");
+            }
+        }
+
+        // Xóa file vật lý nếu lưu trữ local
+        String filePath = attachment.getFilePath();
+        if (filePath != null && !filePath.startsWith("http")) {
+            try {
+                Files.deleteIfExists(Paths.get(filePath));
+            } catch (IOException e) {
+                // Ignore or log
+            }
+        }
+
+        taskAttachmentRepository.delete(attachment);
+        return ResponseEntity.ok(ApiResponse.success("Xóa tệp đính kèm thành công", null));
     }
 }

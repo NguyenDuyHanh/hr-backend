@@ -3,6 +3,7 @@ package com.tlu.hrm.service.impl;
 import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchDto;
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.model.User;
 import com.tlu.hrm.enums.WorkingStatus;
 import com.tlu.hrm.enums.Gender;
 import com.tlu.hrm.repository.DepartmentRepository;
@@ -59,6 +60,39 @@ public class StaffServiceImpl implements StaffService {
                         if (searchDto.getDepartmentId() != null) {
                             if (staff.getDepartment() == null
                                     || !staff.getDepartment().getId().equals(searchDto.getDepartmentId())) {
+                                return false;
+                            }
+                        }
+                        // 3. Custom role filter for recruitment approvers (ADMIN, HR_MANAGER, HR_RECRUITMENT)
+                        if ("recruitment_approvers".equals(searchDto.getExtWhereClause())) {
+                            User user = userRepository.findByStaffId(staff.getId()).orElse(null);
+                            if (user == null) {
+                                return false;
+                            }
+                            boolean isApprover = user.getUserRoles().stream()
+                                    .anyMatch(ur -> {
+                                        String roleName = ur.getRole().getName();
+                                        return "ROLE_ADMIN".equals(roleName) 
+                                            || "HR_MANAGER".equals(roleName) 
+                                            || "HR_RECRUITMENT".equals(roleName);
+                                    });
+                            if (!isApprover) {
+                                return false;
+                            }
+                        }
+                        // 4. Custom filter for staff without user accounts (optionally ignoring a specific user ID)
+                        if (searchDto.getExtWhereClause() != null && searchDto.getExtWhereClause().startsWith("no_account")) {
+                            User user = userRepository.findByStaffId(staff.getId()).orElse(null);
+                            if (user != null) {
+                                if (searchDto.getExtWhereClause().length() > 10) {
+                                    String currentUserIdStr = searchDto.getExtWhereClause().substring(11); // "no_account_".length() = 11
+                                    try {
+                                        java.util.UUID currentUserId = java.util.UUID.fromString(currentUserIdStr);
+                                        if (user.getId().equals(currentUserId)) {
+                                            return true;
+                                        }
+                                    } catch (IllegalArgumentException ignored) {}
+                                }
                                 return false;
                             }
                         }
@@ -176,6 +210,7 @@ public class StaffServiceImpl implements StaffService {
         staff.setBankAccountNumber(dto.getBankAccountNumber());
         staff.setBankAccountName(dto.getBankAccountName());
         staff.setBankBin(dto.getBankBin());
+        staff.setAnnualLeave(dto.getAnnualLeave());
 
         Staff savedStaff = staffRepository.save(staff);
         return new StaffDto(savedStaff);

@@ -62,6 +62,11 @@ public class WebSecurityConfig {
                     response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
                     response.getWriter().write("{\"success\":false,\"message\":\"Yêu cầu không được xác thực hoặc token đã hết hạn\",\"status\":401}");
                 })
+                .accessDeniedHandler((request, response, accessDeniedException) -> {
+                    response.setContentType("application/json;charset=UTF-8");
+                    response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                    response.getWriter().write("{\"success\":false,\"message\":\"Bạn không có quyền truy cập tài nguyên này\",\"status\":403}");
+                })
             )
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**").permitAll()

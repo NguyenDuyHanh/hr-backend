@@ -17,4 +17,5 @@ public interface TimesheetService {
     void calculateTimesheet(UUID staffId, LocalDate date);
     List<TimesheetDto> getByStaffAndDateRange(UUID staffId, LocalDate start, LocalDate end);
     byte[] exportTimesheetExcel(TimesheetSearchRequest request);
+    void initHolidayTimesheets(UUID staffId, LocalDate start, LocalDate end);
 }

@@ -38,6 +38,9 @@ public class PayrollServiceImpl implements PayrollService {
     @Autowired
     private PayslipService payslipService;
 
+    @Autowired
+    private com.tlu.hrm.service.TimesheetService timesheetService;
+
     @Override
     public Payroll createPayroll(UUID periodId, String name, String code, String description) {
         Period period = periodRepository.findById(periodId)
@@ -133,10 +136,15 @@ public class PayrollServiceImpl implements PayrollService {
 
         for (Staff staff : staffs) {
             // Lấy các khoản cấu hình lương của nhân viên trước để kiểm tra
-            List<StaffSalaryItem> staffSalaryItems = staffSalaryItemRepository.findByStaffId(staff.getId());
+            List<StaffSalaryItem> staffSalaryItems = staffSalaryItemRepository.findByStaffId(staff.getId()).stream()
+                    .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
+                    .collect(Collectors.toList());
             if (staffSalaryItems == null || staffSalaryItems.isEmpty()) {
                 continue; // Chỉ tính phiếu lương cho nhân viên có cấu hình lương
             }
+
+            // Tự động khởi tạo các ngày nghỉ lễ cho nhân viên này nếu chưa có trong bảng công
+            timesheetService.initHolidayTimesheets(staff.getId(), start, end);
 
             // Gọi PayslipService để tính toán chi tiết phiếu lương cho nhân viên này
             Payslip payslip = payslipService.calculateStaffPayslip(staff, payroll, start, end, standardWorkDays,
@@ -160,6 +168,17 @@ public class PayrollServiceImpl implements PayrollService {
         Payroll payroll = payrollRepository.findById(payrollId)
                 .orElseThrow(() -> new IllegalArgumentException("Bảng lương không tồn tại"));
         payroll.setStatus(PayrollStatus.CONFIRMED);
+        return payrollRepository.save(payroll);
+    }
+
+    @Override
+    public Payroll unconfirmPayroll(UUID payrollId) {
+        Payroll payroll = payrollRepository.findById(payrollId)
+                .orElseThrow(() -> new IllegalArgumentException("Bảng lương không tồn tại"));
+        if (payroll.getStatus() != PayrollStatus.CONFIRMED) {
+            throw new IllegalArgumentException("Chỉ có thể hủy xác nhận bảng lương ở trạng thái đã xác nhận");
+        }
+        payroll.setStatus(PayrollStatus.DRAFT);
         return payrollRepository.save(payroll);
     }
 

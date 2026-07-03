@@ -7,6 +7,7 @@ import com.tlu.hrm.exception.ResourceNotFoundException;
 import com.tlu.hrm.service.StaffService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import org.springframework.data.domain.Page;
@@ -14,9 +15,12 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 import java.util.UUID;
 
+import static com.tlu.hrm.enums.RoleType.Constants.*;
+
 @RestController
 @RequestMapping("/api/staffs")
 @CrossOrigin(origins = "*")
+@PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_EMPLOYEE + "')")
 public class StaffController {
 
     @Autowired
@@ -47,18 +51,21 @@ public class StaffController {
     }
 
     @PostMapping("/paging")
-    public ResponseEntity<ApiResponse<Page<StaffDto>>> getAllStaffs(@RequestBody(required = false) SearchDto searchDto) {
+    public ResponseEntity<ApiResponse<Page<StaffDto>>> getAllStaffs(
+            @RequestBody(required = false) SearchDto searchDto) {
         Page<StaffDto> result = staffService.getAllStaffs(searchDto);
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách nhân viên thành công", result));
     }
 
     @GetMapping("/generate-staff-code")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "')")
     public ResponseEntity<ApiResponse<String>> generateStaffCode() {
         String code = staffService.generateStaffCode();
         return ResponseEntity.ok(ApiResponse.success("Tạo mã nhân viên thành công", code));
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "')")
     public ResponseEntity<ApiResponse<StaffDto>> createStaff(@RequestBody StaffDto staffDto) {
         StaffDto result = staffService.saveStaff(staffDto);
         return ResponseEntity.ok(ApiResponse.success("Thêm nhân viên thành công", result));
@@ -72,6 +79,7 @@ public class StaffController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "')")
     public ResponseEntity<ApiResponse<StaffDto>> updateStaff(@PathVariable UUID id, @RequestBody StaffDto staffDto) {
         if (!staffService.existsById(id)) {
             throw new ResourceNotFoundException("Không tìm thấy nhân viên để cập nhật với ID: " + id);
@@ -82,6 +90,7 @@ public class StaffController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "')")
     public ResponseEntity<ApiResponse<Void>> deleteStaff(@PathVariable UUID id) {
         if (!staffService.existsById(id)) {
             throw new ResourceNotFoundException("Không tìm thấy nhân viên để xóa với ID: " + id);
@@ -91,6 +100,7 @@ public class StaffController {
     }
 
     @PostMapping("/export-excel")
+    @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "')")
     public ResponseEntity<byte[]> exportStaffExcel(@RequestBody(required = false) SearchDto searchDto) {
         byte[] excelData = staffService.exportStaffExcel(searchDto);
 
@@ -102,4 +112,3 @@ public class StaffController {
         return ResponseEntity.ok().headers(headers).body(excelData);
     }
 }
-
