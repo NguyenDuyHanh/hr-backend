@@ -56,7 +56,7 @@ public class GetStaffProfileTool implements AiTool {
 
         if (!isManagerOrAdmin) {
             Staff myStaff = currentUser.getStaff();
-            if (myStaff == null || !myStaff.getStaffCode().trim().equalsIgnoreCase(staffCode.trim())) {
+            if (myStaff == null || !matchStaffCode(myStaff.getStaffCode(), staffCode)) {
                 return "{\"status\": \"error\", \"message\": \"Bạn không có quyền xem thông tin của nhân viên này.\"}";
             }
         }
@@ -64,14 +64,14 @@ public class GetStaffProfileTool implements AiTool {
         List<Staff> staffs = staffRepository.findAll();
         Staff foundStaff = null;
         for (Staff s : staffs) {
-            if (s.getStaffCode() != null && s.getStaffCode().trim().equalsIgnoreCase(staffCode.trim())) {
+            if (s.getStaffCode() != null && matchStaffCode(s.getStaffCode(), staffCode)) {
                 foundStaff = s;
                 break;
             }
         }
 
         if (foundStaff == null) {
-            return "{\"status\": \"error\", \"message\": \"Không tìm thấy nhân viên với mã: " + staffCode + "\"}";
+            return "{\"status\": \"success\", \"message\": \"Không tìm thấy nhân viên với mã: " + staffCode + "\"}";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -89,6 +89,28 @@ public class GetStaffProfileTool implements AiTool {
         sb.append("\"position\":\"").append(foundStaff.getPosition() != null ? escapeJson(foundStaff.getPosition().getName()) : "—").append("\"");
         sb.append("}");
         return sb.toString();
+    }
+
+    private boolean matchStaffCode(String dbCode, String inputCode) {
+        if (dbCode == null || inputCode == null) return false;
+        String cleanDb = cleanCode(dbCode);
+        String cleanInput = cleanCode(inputCode);
+        return cleanDb.equalsIgnoreCase(cleanInput);
+    }
+
+    private String cleanCode(String code) {
+        if (code == null) return "";
+        String result = code.trim().toUpperCase();
+        while (result.startsWith("NV") || result.startsWith("MÃ") || result.startsWith("MA")) {
+            if (result.startsWith("NV")) {
+                result = result.substring(2).trim();
+            } else if (result.startsWith("MÃ")) {
+                result = result.substring(2).trim();
+            } else if (result.startsWith("MA")) {
+                result = result.substring(2).trim();
+            }
+        }
+        return result;
     }
 
     private String escapeJson(String str) {

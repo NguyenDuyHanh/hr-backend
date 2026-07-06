@@ -13,7 +13,6 @@ import java.util.List;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class AiChatRequest {
     private List<ChatMessage> messages;
-    private String apiKey;
     private String model;
 
     @Data

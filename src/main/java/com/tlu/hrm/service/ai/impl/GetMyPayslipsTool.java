@@ -62,12 +62,14 @@ public class GetMyPayslipsTool implements AiTool {
                         || "HR_COMPENSATION_BENEFIT".equals(ur.getRole().getName()));
 
         Staff targetStaff = null;
+        boolean hasParams = (staffCode != null && !staffCode.trim().isEmpty()) 
+                || (name != null && !name.trim().isEmpty());
 
         if (hasPayrollAccess) {
             if (staffCode != null && !staffCode.trim().isEmpty()) {
                 List<Staff> staffs = staffRepository.findAll();
                 for (Staff s : staffs) {
-                    if (s.getStaffCode() != null && s.getStaffCode().trim().equalsIgnoreCase(staffCode.trim())) {
+                    if (s.getStaffCode() != null && matchStaffCode(s.getStaffCode(), staffCode)) {
                         targetStaff = s;
                         break;
                     }
@@ -83,12 +85,12 @@ public class GetMyPayslipsTool implements AiTool {
             }
         }
 
-        if (targetStaff == null) {
+        if (targetStaff == null && !hasParams) {
             targetStaff = currentUser.getStaff();
         }
 
         if (targetStaff == null) {
-            return "{\"status\": \"error\", \"message\": \"Không tìm thấy thông tin nhân sự để truy vấn phiếu lương.\"}";
+            return "{\"status\": \"success\", \"message\": \"Không tìm thấy thông tin nhân sự phù hợp để truy vấn phiếu lương.\"}";
         }
 
         List<Payslip> all = payslipRepository.findAll();
@@ -106,10 +108,14 @@ public class GetMyPayslipsTool implements AiTool {
             return "{\"status\": \"success\", \"message\": \"Không tìm thấy phiếu lương nào cho nhân viên này.\", \"payslips\": []}";
         }
 
-        // Sắp xếp phiếu lương mới nhất lên trước
+        // Sắp xếp phiếu lương theo năm và tháng giảm dần
         filtered.sort((a, b) -> {
-            if (a.getCreateDate() == null || b.getCreateDate() == null) return 0;
-            return b.getCreateDate().compareTo(a.getCreateDate());
+            int yearA = getPayslipYear(a);
+            int yearB = getPayslipYear(b);
+            if (yearA != yearB) {
+                return Integer.compare(yearB, yearA);
+            }
+            return Integer.compare(getPayslipMonth(b), getPayslipMonth(a));
         });
 
         StringBuilder sb = new StringBuilder();
@@ -122,6 +128,8 @@ public class GetMyPayslipsTool implements AiTool {
             if (i > 0) sb.append(",");
             sb.append("{");
             sb.append("\"payrollName\":\"").append(p.getPayroll() != null ? escapeJson(p.getPayroll().getName()) : "—").append("\",");
+            sb.append("\"month\":").append(getPayslipMonth(p)).append(",");
+            sb.append("\"year\":").append(getPayslipYear(p)).append(",");
             sb.append("\"totalWorkDays\":").append(p.getTotalWorkDays() != null ? p.getTotalWorkDays() : 0.0).append(",");
             sb.append("\"totalOtHours\":").append(p.getTotalOtHours() != null ? p.getTotalOtHours() : 0.0).append(",");
             sb.append("\"totalIncome\":").append(p.getTotalIncome() != null ? p.getTotalIncome() : 0.0).append(",");
@@ -133,6 +141,42 @@ public class GetMyPayslipsTool implements AiTool {
         }
         sb.append("]}");
         return sb.toString();
+    }
+
+    private int getPayslipYear(Payslip p) {
+        if (p.getPayroll() != null && p.getPayroll().getPeriod() != null) {
+            return p.getPayroll().getPeriod().getYear() != null ? p.getPayroll().getPeriod().getYear() : 0;
+        }
+        return 0;
+    }
+
+    private int getPayslipMonth(Payslip p) {
+        if (p.getPayroll() != null && p.getPayroll().getPeriod() != null) {
+            return p.getPayroll().getPeriod().getMonth() != null ? p.getPayroll().getPeriod().getMonth() : 0;
+        }
+        return 0;
+    }
+
+    private boolean matchStaffCode(String dbCode, String inputCode) {
+        if (dbCode == null || inputCode == null) return false;
+        String cleanDb = cleanCode(dbCode);
+        String cleanInput = cleanCode(inputCode);
+        return cleanDb.equalsIgnoreCase(cleanInput);
+    }
+
+    private String cleanCode(String code) {
+        if (code == null) return "";
+        String result = code.trim().toUpperCase();
+        while (result.startsWith("NV") || result.startsWith("MÃ") || result.startsWith("MA")) {
+            if (result.startsWith("NV")) {
+                result = result.substring(2).trim();
+            } else if (result.startsWith("MÃ")) {
+                result = result.substring(2).trim();
+            } else if (result.startsWith("MA")) {
+                result = result.substring(2).trim();
+            }
+        }
+        return result;
     }
 
     private String escapeJson(String str) {

@@ -113,11 +113,9 @@ public class PeriodServiceImpl implements PeriodService {
             payroll.setIsDeleted(true);
             payrollRepository.save(payroll);
 
-            List<Payslip> payslips = payslipRepository.findByPayrollId(payroll.getId());
-            for (Payslip payslip : payslips) {
-                payslip.setIsDeleted(true);
-            }
-            payslipRepository.saveAll(payslips);
+            // Xóa mềm các phiếu lương và chi tiết phiếu lương
+            payslipRepository.deleteItemsByPayrollId(payroll.getId());
+            payslipRepository.deleteByPayrollId(payroll.getId());
         }
     }
 

@@ -111,7 +111,8 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalStateException("Bảng lương đã được xác nhận, không thể tính toán lại.");
         }
 
-        // 1. Xóa kết quả tính toán cũ của bảng lương này
+        // 1. Xóa kết quả tính toán cũ của bảng lương này (Xóa mềm cả Payslip và PayslipItem)
+        payslipRepository.deleteItemsByPayrollId(payrollId);
         payslipRepository.deleteByPayrollId(payrollId);
 
         // 2. Xác định ngày bắt đầu và kết thúc từ kỳ lương
@@ -193,11 +194,9 @@ public class PayrollServiceImpl implements PayrollService {
         payroll.setIsDeleted(true);
         payrollRepository.save(payroll);
 
-        List<Payslip> payslips = payslipRepository.findByPayrollId(payrollId);
-        for (Payslip payslip : payslips) {
-            payslip.setIsDeleted(true);
-        }
-        payslipRepository.saveAll(payslips);
+        // Xóa mềm các phiếu lương và chi tiết phiếu lương
+        payslipRepository.deleteItemsByPayrollId(payrollId);
+        payslipRepository.deleteByPayrollId(payrollId);
     }
 
     @Override
@@ -206,9 +205,8 @@ public class PayrollServiceImpl implements PayrollService {
             throw new IllegalArgumentException("Người dùng hiện tại chưa liên kết với nhân viên nào");
         }
         return payslipRepository
-                .findByStaffIdAndPayrollPeriodIdAndPayrollStatus(currentUser.getStaff().getId(), periodId,
-                        PayrollStatus.CONFIRMED)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu lương đã xác nhận cho kỳ lương này"));
+                .findByStaffIdAndPayrollPeriodId(currentUser.getStaff().getId(), periodId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy phiếu lương cho kỳ lương này"));
     }
 
     @Override

@@ -56,39 +56,66 @@ public class SearchStaffTool implements AiTool {
         String departmentName = arguments.has("departmentName") ? arguments.get("departmentName").asText() : null;
         String positionName = arguments.has("positionName") ? arguments.get("positionName").asText() : null;
 
-        List<Staff> staffs = staffRepository.findAll();
-        List<Staff> filtered = new ArrayList<>();
-        
-        // RBAC: HR_EMPLOYEE chỉ tìm thấy chính mình hoặc danh sách nhân viên khác nhưng giới hạn thông tin nhạy cảm.
-        // Ở đây để đơn giản và an toàn, HR_EMPLOYEE vẫn được tìm kiếm mọi người nhưng thông tin nhạy cảm sẽ không được trả về ở execute.
         boolean isManagerOrAdmin = currentUser.getUserRoles().stream()
                 .anyMatch(ur -> "ROLE_ADMIN".equals(ur.getRole().getName())
                         || "HR_MANAGER".equals(ur.getRole().getName()));
 
-        for (Staff s : staffs) {
-            if (s.getIsDeleted() != null && s.getIsDeleted()) {
-                continue;
-            }
-            boolean match = true;
-            if (name != null && !name.trim().isEmpty()) {
-                if (s.getDisplayName() == null || !s.getDisplayName().toLowerCase().contains(name.toLowerCase().trim())) {
-                    match = false;
+        List<Staff> filtered = new ArrayList<>();
+
+        if (!isManagerOrAdmin) {
+            // RBAC: Nhân viên thường chỉ được phép tìm kiếm chính mình
+            Staff myStaff = currentUser.getStaff();
+            if (myStaff != null && (myStaff.getIsDeleted() == null || !myStaff.getIsDeleted())) {
+                boolean match = true;
+                if (name != null && !name.trim().isEmpty()) {
+                    if (myStaff.getDisplayName() == null || !myStaff.getDisplayName().toLowerCase().contains(name.toLowerCase().trim())) {
+                        match = false;
+                    }
+                }
+                if (departmentName != null && !departmentName.trim().isEmpty()) {
+                    if (myStaff.getDepartment() == null || myStaff.getDepartment().getName() == null || 
+                            !myStaff.getDepartment().getName().toLowerCase().contains(departmentName.toLowerCase().trim())) {
+                        match = false;
+                    }
+                }
+                if (positionName != null && !positionName.trim().isEmpty()) {
+                    if (myStaff.getPosition() == null || myStaff.getPosition().getName() == null || 
+                            !myStaff.getPosition().getName().toLowerCase().contains(positionName.toLowerCase().trim())) {
+                        match = false;
+                    }
+                }
+                if (match) {
+                    filtered.add(myStaff);
                 }
             }
-            if (departmentName != null && !departmentName.trim().isEmpty()) {
-                if (s.getDepartment() == null || s.getDepartment().getName() == null || 
-                        !s.getDepartment().getName().toLowerCase().contains(departmentName.toLowerCase().trim())) {
-                    match = false;
+        } else {
+            // Manager/Admin được quyền tìm kiếm toàn bộ nhân viên
+            List<Staff> staffs = staffRepository.findAll();
+            for (Staff s : staffs) {
+                if (s.getIsDeleted() != null && s.getIsDeleted()) {
+                    continue;
                 }
-            }
-            if (positionName != null && !positionName.trim().isEmpty()) {
-                if (s.getPosition() == null || s.getPosition().getName() == null || 
-                        !s.getPosition().getName().toLowerCase().contains(positionName.toLowerCase().trim())) {
-                    match = false;
+                boolean match = true;
+                if (name != null && !name.trim().isEmpty()) {
+                    if (s.getDisplayName() == null || !s.getDisplayName().toLowerCase().contains(name.toLowerCase().trim())) {
+                        match = false;
+                    }
                 }
-            }
-            if (match) {
-                filtered.add(s);
+                if (departmentName != null && !departmentName.trim().isEmpty()) {
+                    if (s.getDepartment() == null || s.getDepartment().getName() == null || 
+                            !s.getDepartment().getName().toLowerCase().contains(departmentName.toLowerCase().trim())) {
+                        match = false;
+                    }
+                }
+                if (positionName != null && !positionName.trim().isEmpty()) {
+                    if (s.getPosition() == null || s.getPosition().getName() == null || 
+                            !s.getPosition().getName().toLowerCase().contains(positionName.toLowerCase().trim())) {
+                        match = false;
+                    }
+                }
+                if (match) {
+                    filtered.add(s);
+                }
             }
         }
 
