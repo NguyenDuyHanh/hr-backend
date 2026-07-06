@@ -52,11 +52,8 @@ public class AiController {
 
     @PostMapping
     public ResponseEntity<StreamingResponseBody> chat(@RequestBody AiChatRequest request) {
-        String tempApiKey = (request.getApiKey() != null && !request.getApiKey().trim().isEmpty()) 
-                ? request.getApiKey().trim() : defaultApiKey;
-                
-        final String apiKey = (tempApiKey == null || tempApiKey.trim().isEmpty()) 
-                ? "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" : tempApiKey;
+        final String apiKey = (defaultApiKey == null || defaultApiKey.trim().isEmpty()) 
+                ? "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" : defaultApiKey;
                 
         String model = (request.getModel() != null && !request.getModel().trim().isEmpty()) 
                 ? request.getModel().trim() : "llama-3.3-70b-versatile";
@@ -351,10 +348,24 @@ public class AiController {
         sb.append("- Sử dụng 'getMyTasks' khi muốn xem các công việc/nhiệm vụ (có thể lọc theo dự án).\n");
         sb.append("- Sử dụng 'getMyLeaveRequests' khi muốn xem lịch sử hoặc danh sách đơn nghỉ phép.\n");
         sb.append("- Sử dụng 'getMyLeaveBalance' khi muốn xem số dư ngày nghỉ phép năm còn lại.\n");
-        sb.append("- Sử dụng 'getMyPayslips' khi người dùng muốn tra cứu phiếu lương/lịch sử nhận lương.\n\n");
+        sb.append("- Sử dụng 'getMyPayslips' khi người dùng muốn tra cứu phiếu lương/lịch sử nhận lương.\n");
+        sb.append("- Sử dụng 'getMyTimesheet' khi muốn biết số ngày đi làm, số công hoặc giờ tăng ca thực tế của chính họ trong tháng.\n");
+        sb.append("- Sử dụng 'getMyProfile' khi người dùng muốn xem thông tin cá nhân của chính họ (ví dụ: tôi thuộc phòng ban nào, mã nhân viên của tôi là gì, xem hồ sơ của tôi, tôi là ai).\n");
+        sb.append("- Sử dụng 'getRecruitments' khi muốn xem danh sách tin tuyển dụng, vị trí đang tuyển trong hệ thống.\n");
+        sb.append("- Sử dụng 'getCandidates' khi muốn xem danh sách ứng viên tuyển dụng, thông tin chi tiết ứng viên hoặc lọc theo tin tuyển dụng.\n");
+        sb.append("- Sử dụng 'getDashboardSummary' khi muốn xem dữ liệu tổng quan dashboard (tổng nhân sự, phòng ban, dự án,...).\n");
+        sb.append("- Sử dụng 'getStaffTimesheet' khi muốn tra cứu thông tin chấm công, đi muộn về sớm của nhân viên khác (dành cho quản lý/admin).\n");
+        sb.append("- Sử dụng 'getPayrollSummary' khi quản lý muốn xem thông tin tổng quan về các bảng lương và phiếu lương chưa thanh toán.\n");
+        sb.append("- Sử dụng 'getPositions' khi muốn xem các chức danh/vị trí công việc đang có trong hệ thống.\n");
+        sb.append("- Sử dụng 'getStaffSalaryItems' khi muốn tra cứu mức lương cơ bản hoặc phụ cấp của nhân viên.\n\n");
         sb.append("Khi thực hiện gọi công cụ, hãy điền đúng tham số và không thêm bất kỳ văn bản giải thích nào ngoài lệnh gọi công cụ.\n");
-        sb.append("Khi trả lời người dùng, hãy trình bày bằng tiếng Việt, định dạng Markdown chuyên nghiệp, trực quan, có cấu trúc rõ ràng.\n");
+        sb.append("Quy tắc cấu trúc câu trả lời:\n");
+        sb.append("1. Tuyệt đối KHÔNG được viết tên của công cụ/hàm kỹ thuật (ví dụ: 'getEmployeeCount', 'getMyProfile', 'searchStaff', 'getMyPayslips', 'tool', 'function'...) ở đầu hoặc bất cứ đâu trong câu trả lời.\n");
+        sb.append("2. Tuyệt đối KHÔNG tự tạo các tiêu đề rập khuôn dựa trên tên công cụ (ví dụ: 'Tổng Số Nhân Viên Công Ty:', 'Thông Tin Cá Nhân:', 'Kết quả tìm kiếm:',...).\n");
+        sb.append("3. Tuyệt đối KHÔNG được lặp lại lệnh gọi công cụ kèm tham số dưới dạng chữ (ví dụ: 'getMyTimesheet{\"month\":7,\"year\":2026}', 'getMyProfile{}',...) ở đầu hoặc bất cứ đâu trong câu trả lời.\n");
+        sb.append("4. Hãy đi thẳng vào nội dung câu trả lời một cách tự nhiên, ngắn gọn và mạch lạc bằng tiếng Việt như một con người thực sự đang trò chuyện.\n");
         sb.append("Lưu ý về bảo mật (RBAC): Các công cụ của bạn đã được thiết lập để tự động lọc kết quả phù hợp với quyền hạn của tài khoản đang trò chuyện. Hãy tự tin trả lời dựa trên kết quả trả về từ công cụ.\n");
+        sb.append("Nếu kết quả trả về từ công cụ (tool output) có chứa thông báo lỗi, thất bại hoặc không có quyền (ví dụ: 'status': 'error', 'message': 'Bạn không có quyền...'), bạn BẮT BUỘC phải thông báo rõ ràng cho người dùng rằng họ không có quyền truy cập thông tin này. Tuyệt đối KHÔNG được tự ý sáng tạo hay bịa đặt ra số liệu giả lập để thay thế trong trường hợp bị từ chối quyền truy cập.\n");
         sb.append("Tuyệt đối KHÔNG tự sáng tạo hoặc bịa đặt ra bất kỳ thông tin và số liệu giả nào.\n\n");
 
         // Inject Real-time Clock Info dynamically

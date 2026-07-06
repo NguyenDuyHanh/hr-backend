@@ -1,5 +1,6 @@
 package com.tlu.hrm.service.impl;
 
+import com.tlu.hrm.dto.request.HolidayDto;
 import com.tlu.hrm.dto.request.TimesheetDetailDto;
 import com.tlu.hrm.dto.request.TimesheetDto;
 import com.tlu.hrm.dto.search.TimesheetSearchRequest;
@@ -8,6 +9,7 @@ import com.tlu.hrm.enums.TimesheetStatus;
 import com.tlu.hrm.enums.LeaveType;
 import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
+import com.tlu.hrm.service.HolidayService;
 import com.tlu.hrm.service.TimesheetService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -60,6 +62,9 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     @Autowired
     private LeaveRequestRepository leaveRequestRepository;
+
+    @Autowired
+    private HolidayService holidayService;
 
     @Override
     public Page<TimesheetDto> search(TimesheetSearchRequest request) {
@@ -332,7 +337,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         timesheet.getDetails().clear();
 
         if (rawLogs.isEmpty()) {
-            if (isHoliday(date)) {
+            if (holidayService.isHoliday(date)) {
                 timesheet.setTotalWorkRatio(1.0);
                 timesheet.setStandardHours(8.0);
                 timesheet.setNote("Nghỉ lễ hưởng nguyên lương");
@@ -350,7 +355,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         // Phân loại lượt chấm công thô theo dải giờ và loại ghi nhận (CHECK_IN /
         // CHECK_OUT)
         List<CheckInOutRecord> morningInLogs = new java.util.ArrayList<>();
-        List<CheckInOutRecord> lunchLogs = new java.util.ArrayList<>();
+        List<CheckInOutRecord> morningOutLogs = new java.util.ArrayList<>();
         List<CheckInOutRecord> afternoonInLogs = new java.util.ArrayList<>();
         List<CheckInOutRecord> afternoonOutLogs = new java.util.ArrayList<>();
         List<CheckInOutRecord> otInLogs = new java.util.ArrayList<>();
@@ -366,7 +371,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                     if (type == CheckInOutType.CHECK_IN) {
                         morningInLogs.add(log);
                     } else if (type == CheckInOutType.CHECK_OUT) {
-                        lunchLogs.add(log);
+                        morningOutLogs.add(log);
                     }
                 } else if ("CA_CHIEU".equals(code)) {
                     if (type == CheckInOutType.CHECK_IN) {
@@ -432,7 +437,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // B. Xét ca ban ngày: Ca Cả Ngày vs. Ca Sáng/Chiều
-        boolean hasLunchQuets = !lunchLogs.isEmpty();
+        boolean hasLunchQuets = !morningOutLogs.isEmpty();
 
         // Kiểm tra xem ngày hôm nay có lượt chấm công nào chỉ định đích danh ca Sáng
         // hoặc ca
@@ -457,13 +462,13 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (shouldSplit) {
             // Chia làm Ca Sáng + Ca Chiều riêng biệt
             // Ca Sáng
-            if (morningShift != null && (!morningInLogs.isEmpty() || !lunchLogs.isEmpty())) {
+            if (morningShift != null && (!morningInLogs.isEmpty() || !morningOutLogs.isEmpty())) {
                 TimesheetDetail morningDetail = new TimesheetDetail();
                 morningDetail.setTimesheet(timesheet);
                 morningDetail.setShift(morningShift);
 
                 CheckInOutRecord inRec = morningInLogs.isEmpty() ? null : morningInLogs.get(0);
-                CheckInOutRecord outRec = lunchLogs.isEmpty() ? null : lunchLogs.get(lunchLogs.size() - 1);
+                CheckInOutRecord outRec = morningOutLogs.isEmpty() ? null : morningOutLogs.get(morningOutLogs.size() - 1);
 
                 mapCheckInOut(morningDetail, inRec, outRec, morningShift.getStartTime(), morningShift.getEndTime(),
                         0.5);
@@ -479,12 +484,12 @@ public class TimesheetServiceImpl implements TimesheetService {
 
                 // Cải tiến: Nếu không chấm công check-in chiều (afternoonInLogs rỗng) nhưng có
                 // chấm công
-                // nghỉ trưa (lunchLogs),
+                // nghỉ trưa (morningOutLogs),
                 // ta lấy log chấm công nghỉ trưa cuối cùng làm check-in chiều để tránh nhân
                 // viên bị
                 // mất công ca chiều khi làm cả ngày
                 CheckInOutRecord inRec = afternoonInLogs.isEmpty()
-                        ? (lunchLogs.isEmpty() ? null : lunchLogs.get(lunchLogs.size() - 1))
+                        ? (morningOutLogs.isEmpty() ? null : morningOutLogs.get(morningOutLogs.size() - 1))
                         : afternoonInLogs.get(0);
                 CheckInOutRecord outRec = afternoonOutLogs.isEmpty() ? null
                         : afternoonOutLogs.get(afternoonOutLogs.size() - 1);
@@ -566,27 +571,10 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
     }
 
-    private boolean isHoliday(LocalDate date) {
-        if (date == null) {
-            return false;
-        }
-        int month = date.getMonthValue();
-        int day = date.getDayOfMonth();
-
-        // Tết Dương Lịch (1/1)
-        if (month == 1 && day == 1) return true;
-        // Ngày Giải phóng miền Nam (30/4)
-        if (month == 4 && day == 30) return true;
-        // Ngày Quốc tế Lao động (1/5)
-        if (month == 5 && day == 1) return true;
-        // Ngày Quốc khánh (2/9)
-        if (month == 9 && day == 2) return true;
-
-        return false;
-    }
+    // isHoliday() đã được chuyển sang HolidayService - query từ bảng tbl_holiday
 
     private void finalizeTimesheetHours(Timesheet timesheet, LocalDate date, double totalRatio, double stdHours, double otHours) {
-        boolean isHoliday = isHoliday(date);
+        boolean isHoliday = holidayService.isHoliday(date);
         boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
         if (isHoliday) {
@@ -1111,8 +1099,13 @@ public class TimesheetServiceImpl implements TimesheetService {
         Staff staff = staffRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại"));
 
-        for (LocalDate date = start; !date.isAfter(end); date = date.plusDays(1)) {
-            if (isHoliday(date)) {
+        // Lấy danh sách ngày lễ trong khoảng từ DB thay vì check từng ngày hardcoded
+        List<HolidayDto> holidays = holidayService.getHolidaysInRange(start, end);
+        for (HolidayDto holiday : holidays) {
+            LocalDate holidayStart = holiday.getStartDate().isBefore(start) ? start : holiday.getStartDate();
+            LocalDate holidayEnd = holiday.getEndDate().isAfter(end) ? end : holiday.getEndDate();
+
+            for (LocalDate date = holidayStart; !date.isAfter(holidayEnd); date = date.plusDays(1)) {
                 boolean exists = timesheetRepository.findByStaffIdAndWorkingDate(staffId, date).isPresent();
                 if (!exists) {
                     Timesheet timesheet = new Timesheet();
@@ -1121,7 +1114,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                     timesheet.setTotalWorkRatio(1.0);
                     timesheet.setStandardHours(8.0);
                     timesheet.setStatus(TimesheetStatus.APPROVED);
-                    timesheet.setNote("Nghỉ lễ hưởng nguyên lương");
+                    timesheet.setNote("Nghỉ lễ hưởng nguyên lương - " + holiday.getName());
                     timesheet.setOvertimeHours(0.0);
                     timesheet.setWeekendOvertimeHours(0.0);
                     timesheet.setHolidayOvertimeHours(0.0);

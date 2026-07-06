@@ -2,8 +2,10 @@ package com.tlu.hrm.service.ai.impl;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.model.StaffSalaryItem;
 import com.tlu.hrm.model.User;
 import com.tlu.hrm.repository.StaffRepository;
+import com.tlu.hrm.repository.StaffSalaryItemRepository;
 import com.tlu.hrm.service.ai.AiTool;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -11,19 +13,22 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
-public class GetMyLeaveBalanceTool implements AiTool {
+public class GetStaffSalaryItemsTool implements AiTool {
+
+    @Autowired
+    private StaffSalaryItemRepository staffSalaryItemRepository;
 
     @Autowired
     private StaffRepository staffRepository;
 
     @Override
     public String getName() {
-        return "getMyLeaveBalance";
+        return "getStaffSalaryItems";
     }
 
     @Override
     public String getDescription() {
-        return "Lấy thông tin số dư ngày nghỉ phép năm hiện tại. Người quản lý/admin có thể xem số dư phép của nhân viên khác bằng cách cung cấp tên hoặc mã nhân viên. Nhân viên bình thường chỉ xem được của chính mình.";
+        return "Lấy thông tin chi tiết các mức lương cơ bản, phụ cấp hoặc các khoản khấu trừ cố định của nhân viên.";
     }
 
     @Override
@@ -34,11 +39,11 @@ public class GetMyLeaveBalanceTool implements AiTool {
           "properties": {
             "staffCode": {
               "type": "string",
-              "description": "Mã số nhân viên cần tra cứu số dư phép (ví dụ: NV001)."
+              "description": "Mã số nhân viên cần tra cứu (ví dụ: NV001)."
             },
             "name": {
               "type": "string",
-              "description": "Tên nhân viên cần tra cứu số dư phép."
+              "description": "Tên nhân viên cần tra cứu."
             }
           }
         }
@@ -50,18 +55,18 @@ public class GetMyLeaveBalanceTool implements AiTool {
         String staffCode = arguments.has("staffCode") ? arguments.get("staffCode").asText() : null;
         String name = arguments.has("name") ? arguments.get("name").asText() : null;
 
-        boolean isManagerOrAdmin = currentUser.getUserRoles().stream()
+        boolean hasSalaryAccess = currentUser.getUserRoles().stream()
                 .anyMatch(ur -> "ROLE_ADMIN".equals(ur.getRole().getName())
-                        || "HR_MANAGER".equals(ur.getRole().getName()));
+                        || "HR_MANAGER".equals(ur.getRole().getName())
+                        || "HR_COMPENSATION_BENEFIT".equals(ur.getRole().getName()));
 
         Staff targetStaff = null;
         boolean hasParams = (staffCode != null && !staffCode.trim().isEmpty()) 
                 || (name != null && !name.trim().isEmpty());
 
-        if (isManagerOrAdmin) {
-            // Lấy theo tham số truyền vào
+        if (hasSalaryAccess) {
+            List<Staff> staffs = staffRepository.findAll();
             if (staffCode != null && !staffCode.trim().isEmpty()) {
-                List<Staff> staffs = staffRepository.findAll();
                 for (Staff s : staffs) {
                     if (s.getStaffCode() != null && matchStaffCode(s.getStaffCode(), staffCode)) {
                         targetStaff = s;
@@ -69,7 +74,6 @@ public class GetMyLeaveBalanceTool implements AiTool {
                     }
                 }
             } else if (name != null && !name.trim().isEmpty()) {
-                List<Staff> staffs = staffRepository.findAll();
                 for (Staff s : staffs) {
                     if (s.getDisplayName() != null && s.getDisplayName().toLowerCase().contains(name.toLowerCase().trim())) {
                         targetStaff = s;
@@ -79,21 +83,40 @@ public class GetMyLeaveBalanceTool implements AiTool {
             }
         }
 
-        // Nếu không là admin/manager hoặc không tìm thấy theo tham số, mặc định xem của chính mình nếu không truyền params
+        // Nếu không có quyền xem người khác hoặc không tìm thấy theo tham số, mặc định xem của chính mình nếu không truyền params
         if (targetStaff == null && !hasParams) {
             targetStaff = currentUser.getStaff();
         }
 
         if (targetStaff == null) {
-            return "{\"status\": \"success\", \"message\": \"Không tìm thấy thông tin nhân sự phù hợp để xem số dư phép.\"}";
+            return "{\"status\": \"success\", \"message\": \"Không tìm thấy thông tin nhân sự phù hợp để xem mức lương.\" }";
         }
+
+        List<StaffSalaryItem> salaryItems = staffSalaryItemRepository.findByStaffId(targetStaff.getId());
 
         StringBuilder sb = new StringBuilder();
         sb.append("{");
         sb.append("\"status\": \"success\",");
+        sb.append("\"staffName\":\"").append(escapeJson(targetStaff.getDisplayName())).append("\",");
         sb.append("\"staffCode\":\"").append(escapeJson(targetStaff.getStaffCode())).append("\",");
-        sb.append("\"displayName\":\"").append(escapeJson(targetStaff.getDisplayName())).append("\",");
-        sb.append("\"annualLeave\":").append(targetStaff.getAnnualLeave() != null ? targetStaff.getAnnualLeave() : 12.0);
+        sb.append("\"count\": ").append(salaryItems.size()).append(",");
+        sb.append("\"salaryItems\": [");
+
+        for (int i = 0; i < salaryItems.size(); i++) {
+            StaffSalaryItem ssi = salaryItems.get(i);
+            if (ssi.getIsDeleted() != null && ssi.getIsDeleted()) {
+                continue;
+            }
+            if (i > 0) sb.append(",");
+            sb.append("{");
+            sb.append("\"name\":\"").append(ssi.getSalaryItem() != null ? escapeJson(ssi.getSalaryItem().getName()) : "").append("\",");
+            sb.append("\"type\":\"").append(ssi.getSalaryItem() != null && ssi.getSalaryItem().getType() != null ? escapeJson(ssi.getSalaryItem().getType().name()) : "").append("\",");
+            sb.append("\"amount\":").append(ssi.getAmount() != null ? ssi.getAmount() : 0.0).append(",");
+            sb.append("\"calculationType\":\"").append(ssi.getSalaryItem() != null && ssi.getSalaryItem().getCalculationType() != null ? escapeJson(ssi.getSalaryItem().getCalculationType().name()) : "").append("\"");
+            sb.append("}");
+        }
+
+        sb.append("]");
         sb.append("}");
         return sb.toString();
     }
