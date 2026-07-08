@@ -87,4 +87,16 @@ public class CandidateController {
         Boolean result = candidateService.updateStatus(id, status, refusalReason);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật trạng thái ứng viên thành công", result));
     }
+
+    @PostMapping("/export-excel")
+    public ResponseEntity<byte[]> exportCandidatesExcel(@RequestBody(required = false) SearchCandidateDto searchDto) {
+        byte[] excelData = candidateService.exportCandidatesExcel(searchDto);
+
+        org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+        headers.setContentType(org.springframework.http.MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentDispositionFormData("attachment",
+                java.net.URLEncoder.encode("DanhSachUngVien.xlsx", java.nio.charset.StandardCharsets.UTF_8));
+
+        return ResponseEntity.ok().headers(headers).body(excelData);
+    }
 }

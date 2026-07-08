@@ -17,4 +17,5 @@ public interface CandidateService {
     boolean isValidCode(CandidateDto dto);
     String generateCode();
     Boolean updateStatus(UUID id, CandidateStatus status, String refusalReason);
+    byte[] exportCandidatesExcel(SearchCandidateDto searchDto);
 }

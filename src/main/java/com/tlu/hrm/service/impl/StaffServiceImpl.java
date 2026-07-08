@@ -63,6 +63,19 @@ public class StaffServiceImpl implements StaffService {
                                 return false;
                             }
                         }
+                        // Position filter
+                        if (searchDto.getPositionId() != null) {
+                            if (staff.getPosition() == null
+                                    || !staff.getPosition().getId().equals(searchDto.getPositionId())) {
+                                return false;
+                            }
+                        }
+                        // WorkingStatus filter
+                        if (searchDto.getWorkingStatus() != null) {
+                            if (staff.getWorkingStatus() != searchDto.getWorkingStatus()) {
+                                return false;
+                            }
+                        }
                         // 3. Custom role filter for recruitment approvers (ADMIN, HR_MANAGER, HR_RECRUITMENT)
                         if ("recruitment_approvers".equals(searchDto.getExtWhereClause())) {
                             User user = userRepository.findByStaffId(staff.getId()).orElse(null);

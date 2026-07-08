@@ -241,7 +241,7 @@ public class TimesheetServiceImpl implements TimesheetService {
                                 } else {
                                     workingOutLogs.add(log);
                                 }
-                            } else if (log.getShift() == null) {
+                            } else if (log.getShift() == null || "CA_CA_NGAY".equals(log.getShift().getCode())) {
                                 LocalTime t = log.getRecordTime().toLocalTime();
                                 if (log.getRecordType() == CheckInOutType.CHECK_IN) {
                                     if ("CA_SANG".equals(workingShiftCode) && !t.isAfter(LocalTime.of(11, 30))) {
@@ -437,11 +437,9 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // B. Xét ca ban ngày: Ca Cả Ngày vs. Ca Sáng/Chiều
-        boolean hasLunchQuets = !morningOutLogs.isEmpty();
 
         // Kiểm tra xem ngày hôm nay có lượt chấm công nào chỉ định đích danh ca Sáng
-        // hoặc ca
-        // Chiều không
+        // hoặc ca Chiều không
         boolean hasSpecificHalfDayShift = false;
         for (CheckInOutRecord log : rawLogs) {
             if (log.getShift() != null) {
@@ -454,10 +452,8 @@ public class TimesheetServiceImpl implements TimesheetService {
         }
 
         // Quyết định xem có tách ca Sáng/Chiều hay không:
-        // 1. Có chấm công nghỉ trưa (hasLunchQuets)
-        // 2. Hoặc có lượt chấm công chọn đích danh ca Sáng/Chiều
-        // (hasSpecificHalfDayShift)
-        boolean shouldSplit = hasLunchQuets || hasSpecificHalfDayShift;
+        // Chỉ tách khi có lượt chấm công chọn đích danh ca Sáng/Chiều (hasSpecificHalfDayShift)
+        boolean shouldSplit = hasSpecificHalfDayShift;
 
         if (shouldSplit) {
             // Chia làm Ca Sáng + Ca Chiều riêng biệt
@@ -468,7 +464,8 @@ public class TimesheetServiceImpl implements TimesheetService {
                 morningDetail.setShift(morningShift);
 
                 CheckInOutRecord inRec = morningInLogs.isEmpty() ? null : morningInLogs.get(0);
-                CheckInOutRecord outRec = morningOutLogs.isEmpty() ? null : morningOutLogs.get(morningOutLogs.size() - 1);
+                CheckInOutRecord outRec = morningOutLogs.isEmpty() ? null
+                        : morningOutLogs.get(morningOutLogs.size() - 1);
 
                 mapCheckInOut(morningDetail, inRec, outRec, morningShift.getStartTime(), morningShift.getEndTime(),
                         0.5);
@@ -523,17 +520,6 @@ public class TimesheetServiceImpl implements TimesheetService {
         timesheetRepository.save(timesheet);
     }
 
-    private List<CheckInOutRecord> filterLogs(List<CheckInOutRecord> logs, LocalTime start, LocalTime end,
-            CheckInOutType type) {
-        return logs.stream()
-                .filter(l -> {
-                    LocalTime t = l.getRecordTime().toLocalTime();
-                    boolean timeMatch = !t.isBefore(start) && !t.isAfter(end);
-                    return timeMatch && l.getRecordType() == type;
-                })
-                .collect(Collectors.toList());
-    }
-
     private void mapCheckInOut(TimesheetDetail detail, CheckInOutRecord inRec, CheckInOutRecord outRec,
             LocalTime shiftStart, LocalTime shiftEnd, double ratio) {
         if (inRec != null) {
@@ -573,9 +559,11 @@ public class TimesheetServiceImpl implements TimesheetService {
 
     // isHoliday() đã được chuyển sang HolidayService - query từ bảng tbl_holiday
 
-    private void finalizeTimesheetHours(Timesheet timesheet, LocalDate date, double totalRatio, double stdHours, double otHours) {
+    private void finalizeTimesheetHours(Timesheet timesheet, LocalDate date, double totalRatio, double stdHours,
+            double otHours) {
         boolean isHoliday = holidayService.isHoliday(date);
-        boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
+        boolean isWeekend = (date.getDayOfWeek() == java.time.DayOfWeek.SATURDAY
+                || date.getDayOfWeek() == java.time.DayOfWeek.SUNDAY);
 
         if (isHoliday) {
             double totalOt = stdHours + otHours;
