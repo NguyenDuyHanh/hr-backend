@@ -3,12 +3,14 @@ package com.tlu.hrm.service.impl;
 import com.tlu.hrm.dto.request.CandidateDto;
 import com.tlu.hrm.dto.search.SearchCandidateDto;
 import com.tlu.hrm.enums.CandidateStatus;
+import com.tlu.hrm.enums.Gender;
 import com.tlu.hrm.enums.WorkingStatus;
 import com.tlu.hrm.exception.ResourceNotFoundException;
 import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
 import com.tlu.hrm.service.CandidateService;
 import com.tlu.hrm.service.StaffService;
+import com.tlu.hrm.utils.ExcelUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -230,5 +232,96 @@ public class CandidateServiceImpl implements CandidateService {
         }
         candidateRepository.save(cand);
         return true;
+    }
+
+    @Override
+    public byte[] exportCandidatesExcel(SearchCandidateDto searchDto) {
+        List<CandidateDto> filteredList = candidateRepository.findAll().stream()
+                .filter(c -> c.getIsDeleted() == null || !c.getIsDeleted())
+                .filter(c -> {
+                    if (searchDto != null) {
+                        if (searchDto.getKeyword() != null && !searchDto.getKeyword().isEmpty()) {
+                            String kw = searchDto.getKeyword().toLowerCase();
+                            boolean match = (c.getDisplayName() != null && c.getDisplayName().toLowerCase().contains(kw))
+                                    || (c.getCandidateCode() != null && c.getCandidateCode().toLowerCase().contains(kw))
+                                    || (c.getEmail() != null && c.getEmail().toLowerCase().contains(kw))
+                                    || (c.getPhoneNumber() != null && c.getPhoneNumber().contains(kw));
+                            if (!match) return false;
+                        }
+                        if (searchDto.getRecruitmentId() != null) {
+                            if (c.getRecruitment() == null || !searchDto.getRecruitmentId().equals(c.getRecruitment().getId())) {
+                                return false;
+                            }
+                        }
+                        if (searchDto.getStatus() != null) {
+                            if (!searchDto.getStatus().equals(c.getStatus())) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .sorted((a, b) -> {
+                    if (a.getCreateDate() != null && b.getCreateDate() != null) {
+                        return b.getCreateDate().compareTo(a.getCreateDate());
+                    }
+                    return 0;
+                })
+                .map(CandidateDto::new)
+                .collect(Collectors.toList());
+
+        List<String> headers = List.of(
+                "STT",
+                "Mã ứng viên",
+                "Họ và tên",
+                "Giới tính",
+                "Ngày sinh",
+                "SĐT",
+                "Email",
+                "Địa chỉ",
+                "Phòng ban tiếp nhận",
+                "Vị trí tiếp nhận",
+                "Tin tuyển dụng",
+                "Trạng thái",
+                "Ghi chú");
+
+        return ExcelUtil.exportToExcel("Danh sách ứng viên", headers, filteredList,
+                (dto, row, style, centerStyle, stt) -> {
+                    int col = 0;
+                    ExcelUtil.writeCell(row, col++, stt, centerStyle); // STT (center)
+                    ExcelUtil.writeCell(row, col++, dto.getCandidateCode(), centerStyle); // Mã ứng viên (center)
+                    ExcelUtil.writeCell(row, col++, dto.getDisplayName(), style);
+                    
+                    String genderStr = "";
+                    if (dto.getGender() != null) {
+                        genderStr = switch (dto.getGender()) {
+                            case MALE -> "Nam";
+                            case FEMALE -> "Nữ";
+                            case OTHER -> "Khác";
+                        };
+                    }
+                    ExcelUtil.writeCell(row, col++, genderStr, centerStyle); // Giới tính (center)
+                    ExcelUtil.writeCell(row, col++, dto.getBirthDate(), centerStyle); // Ngày sinh (center)
+                    ExcelUtil.writeCell(row, col++, dto.getPhoneNumber(), style);
+                    ExcelUtil.writeCell(row, col++, dto.getEmail(), style);
+                    ExcelUtil.writeCell(row, col++, dto.getAddress(), style);
+                    ExcelUtil.writeCell(row, col++, dto.getDepartmentName(), style);
+                    ExcelUtil.writeCell(row, col++, dto.getPositionName(), style);
+                    ExcelUtil.writeCell(row, col++, dto.getRecruitmentName(), style);
+                    
+                    String statusStr = "";
+                    if (dto.getStatus() != null) {
+                        statusStr = switch (dto.getStatus()) {
+                            case SCREENING -> "Sơ tuyển";
+                            case INTERVIEW -> "Phỏng vấn";
+                            case QUALIFIED -> "Đạt yêu cầu";
+                            case WAITING -> "Chờ việc";
+                            case ONBOARDED -> "Đã onboard";
+                            case REJECTED -> "Từ chối";
+                        };
+                    }
+                    ExcelUtil.writeCell(row, col++, statusStr, centerStyle); // Trạng thái (center)
+                    ExcelUtil.writeCell(row, col++, dto.getNote(), style);
+                });
     }
 }

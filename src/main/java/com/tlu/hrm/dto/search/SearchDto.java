@@ -6,12 +6,12 @@ import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 import java.util.UUID;
+import com.tlu.hrm.enums.WorkingStatus;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class SearchDto implements Serializable {
-
     private Long id;
     private int pageIndex;
     private int pageSize;
@@ -24,4 +24,5 @@ public class SearchDto implements Serializable {
     private Boolean active;
     private UUID positionId;
     private UUID roleId;
+    private WorkingStatus workingStatus;
 }

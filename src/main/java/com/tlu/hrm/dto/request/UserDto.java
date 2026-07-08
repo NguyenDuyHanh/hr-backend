@@ -25,6 +25,7 @@ public class UserDto {
     private String staffName;
     private String staffCode;
     private String avatarUrl;
+    private String email;
 
     public UserDto(User entity) {
         if (entity != null) {
@@ -39,6 +40,7 @@ public class UserDto {
                 this.staffName = entity.getStaff().getDisplayName();
                 this.staffCode = entity.getStaff().getStaffCode();
                 this.avatarUrl = entity.getStaff().getAvatarUrl();
+                this.email = entity.getStaff().getEmail();
             }
         }
     }
