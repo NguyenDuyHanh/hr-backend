@@ -165,7 +165,7 @@ public class TimesheetServiceImpl implements TimesheetService {
         if (optional.isPresent()) {
             Timesheet entity = optional.get();
             entity.setStatus(status);
-            if (note != null) {
+            if (note != null && !note.trim().isEmpty()) {
                 entity.setNote(note);
             }
             timesheetRepository.save(entity);
@@ -280,8 +280,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                     double otHours = calculateOvertimeHours(timesheet.getDetails());
                     finalizeTimesheetHours(timesheet, date, totalRatio, stdHours, otHours);
                     timesheet.setStatus(TimesheetStatus.APPROVED);
-                    timesheet.setNote(
-                            "Nghỉ nửa ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                    String reason = (leave.getRequestReason() != null && !leave.getRequestReason().trim().isEmpty())
+                            ? " (" + leave.getRequestReason() + ")"
+                            : "";
+                    timesheet.setNote("Nghỉ nửa ngày" + reason);
                     timesheetRepository.save(timesheet);
                     return;
                 }
@@ -308,8 +310,10 @@ public class TimesheetServiceImpl implements TimesheetService {
                 timesheet.getDetails().add(leaveDetail);
 
                 timesheet.setStatus(TimesheetStatus.APPROVED);
-                timesheet.setNote(
-                        "Nghỉ cả ngày: " + leave.getLeaveType().name() + " (" + leave.getRequestReason() + ")");
+                String reason = (leave.getRequestReason() != null && !leave.getRequestReason().trim().isEmpty())
+                        ? " (" + leave.getRequestReason() + ")"
+                        : "";
+                timesheet.setNote("Nghỉ cả ngày" + reason);
                 timesheetRepository.save(timesheet);
                 return;
             }

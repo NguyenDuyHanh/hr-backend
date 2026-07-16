@@ -11,6 +11,7 @@ import com.tlu.hrm.service.ProjectActivityService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +26,8 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
 
     @Autowired
     private ProjectActivityRepository projectActivityRepository;
+
+
 
     private Project getProject(UUID projectId) {
         return projectRepository.findById(projectId)
@@ -51,6 +54,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public ProjectActivityResponse addProjectActivity(UUID projectId, ProjectActivityRequest request) {
         Project project = getProject(projectId);
 
@@ -69,6 +73,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public ProjectActivityResponse updateProjectActivity(UUID projectId, UUID activityId,
             ProjectActivityRequest request) {
         ProjectActivity activity = projectActivityRepository.findById(activityId)
@@ -89,6 +94,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public void deleteProjectActivity(UUID projectId, UUID activityId) {
         getProject(projectId);
         ProjectActivity activity = projectActivityRepository.findById(activityId)
@@ -98,6 +104,7 @@ public class ProjectActivityServiceImpl implements ProjectActivityService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public List<ProjectActivityResponse> reorderProjectActivities(UUID projectId, List<UUID> activityIds) {
         getProject(projectId);
         List<ProjectActivity> activities = projectActivityRepository.findByProjectId(projectId);

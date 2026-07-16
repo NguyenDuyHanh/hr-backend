@@ -10,6 +10,7 @@ import com.tlu.hrm.service.ProjectWorkingStatusService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.access.prepost.PreAuthorize;
 
 import java.util.List;
 import java.util.UUID;
@@ -50,6 +51,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public ProjectWorkingStatusResponse addProjectWorkingStatus(UUID projectId, ProjectWorkingStatusResponse request) {
         Project project = getProject(projectId);
 
@@ -67,6 +69,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public ProjectWorkingStatusResponse updateProjectWorkingStatus(UUID projectId, UUID statusId,
             ProjectWorkingStatusResponse request) {
         getProject(projectId);
@@ -84,6 +87,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public void deleteProjectWorkingStatus(UUID projectId, UUID statusId) {
         getProject(projectId);
         ProjectWorkingStatus ws = projectWorkingStatusRepository.findById(statusId)
@@ -93,6 +97,7 @@ public class ProjectWorkingStatusServiceImpl implements ProjectWorkingStatusServ
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#projectId)")
     public List<ProjectWorkingStatusResponse> reorderProjectWorkingStatuses(UUID projectId, List<UUID> statusIds) {
         getProject(projectId);
         List<ProjectWorkingStatus> statuses = projectWorkingStatusRepository.findByProjectId(projectId);

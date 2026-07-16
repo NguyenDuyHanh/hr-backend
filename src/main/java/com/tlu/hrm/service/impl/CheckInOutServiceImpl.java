@@ -67,22 +67,8 @@ public class CheckInOutServiceImpl implements CheckInOutService {
             Timesheet timesheet = timesheetOpt.get();
             TimesheetStatus status = timesheet.getStatus();
             if (status == TimesheetStatus.APPROVED || status == TimesheetStatus.REJECTED) {
-                // Nếu là bảng công đã duyệt/từ chối, chỉ cho phép chấm công cho CA MỚI (chưa có
-                // trong chi tiết ngày hôm đó)
-                boolean shiftExists = false;
-                if (dto.getShiftId() != null && timesheet.getDetails() != null) {
-                    for (TimesheetDetail detail : timesheet.getDetails()) {
-                        if (detail.getShift() != null && detail.getShift().getId().equals(dto.getShiftId())) {
-                            shiftExists = true;
-                            break;
-                        }
-                    }
-                }
-                // Comment out for testing: Allow checking in on approved days
-                if (shiftExists || dto.getShiftId() == null) {
-                    throw new IllegalStateException(
-                            "Ca làm việc này trong ngày hôm nay đã được quản lý phê duyệt hoặc từ chối, không thể tiếp tục chấm công cho ca này!");
-                }
+                throw new IllegalStateException(
+                        "Ngày công này đã được phê duyệt hoặc từ chối, không thể tiếp tục chấm công!");
             }
         }
 
