@@ -11,6 +11,8 @@ import com.tlu.hrm.model.*;
 import com.tlu.hrm.repository.*;
 import com.tlu.hrm.security.SecurityUtils;
 import com.tlu.hrm.service.ProjectService;
+import com.tlu.hrm.utils.ProjectUtils;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -40,6 +42,9 @@ public class ProjectServiceImpl implements ProjectService {
 
     @Autowired
     private SecurityUtils securityUtils;
+
+    @Autowired
+    private ProjectUtils projectUtils;
 
     @Override
     public Page<ProjectResponse> getAllProjects(ProjectSearchRequest request) {
@@ -165,6 +170,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or (#request.id != null and @projectUtils.hasProjectManagerAccess(#request.id))")
     public ProjectResponse saveProject(ProjectCreateRequest request) {
         if (request.getCode() != null) {
             String finalCode = request.getCode().trim().toUpperCase();
@@ -256,6 +262,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#id)")
     public void deleteProject(UUID id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + id));
@@ -264,6 +271,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#id)")
     public void finishProject(UUID id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + id));
@@ -273,6 +281,7 @@ public class ProjectServiceImpl implements ProjectService {
     }
 
     @Override
+    @PreAuthorize("hasAnyAuthority('ROLE_ADMIN', 'HR_MANAGER') or @projectUtils.hasProjectManagerAccess(#id)")
     public void unfinishProject(UUID id) {
         Project project = projectRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy dự án với ID: " + id));

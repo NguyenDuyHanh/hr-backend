@@ -1,5 +1,6 @@
 package com.tlu.hrm.service.impl;
 
+import com.tlu.hrm.dto.request.ChangePasswordRequest;
 import com.tlu.hrm.dto.request.UserDto;
 import com.tlu.hrm.dto.search.SearchDto;
 import com.tlu.hrm.model.User;
@@ -8,9 +9,11 @@ import com.tlu.hrm.model.UserRole;
 import com.tlu.hrm.repository.StaffRepository;
 import com.tlu.hrm.repository.UserRepository;
 import com.tlu.hrm.service.UserService;
+import com.tlu.hrm.exception.CustomException;
 import com.tlu.hrm.exception.ResourceNotFoundException;
 import com.tlu.hrm.security.SecurityUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
@@ -211,5 +214,16 @@ public class UserServiceImpl implements UserService {
         user.setActive(true);
         User saved = userRepository.save(user);
         return new UserDto(saved);
+    }
+
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new CustomException("Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST);
+        }
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy người dùng với ID: " + request.getUserId()));
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
     }
 }

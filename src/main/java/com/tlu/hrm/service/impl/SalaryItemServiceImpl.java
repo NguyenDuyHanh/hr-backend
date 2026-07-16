@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -90,14 +92,21 @@ public class SalaryItemServiceImpl implements SalaryItemService {
         staffSalaryItemRepository.saveAll(oldItems);
 
         List<StaffSalaryItem> toSave = new ArrayList<>();
+        Set<UUID> seenSalaryItemIds = new HashSet<>();
         for (StaffSalaryItem item : items) {
             if (item.getSalaryItem() == null || item.getSalaryItem().getId() == null) {
                 continue;
             }
+            UUID salaryItemId = item.getSalaryItem().getId();
+            if (seenSalaryItemIds.contains(salaryItemId)) {
+                throw new IllegalArgumentException("Khoản lương cấu hình bị trùng lặp cho nhân viên này");
+            }
+            seenSalaryItemIds.add(salaryItemId);
+
             StaffSalaryItem ssi = new StaffSalaryItem();
             ssi.setStaff(staff);
 
-            SalaryItem salaryItem = salaryItemRepository.findById(item.getSalaryItem().getId())
+            SalaryItem salaryItem = salaryItemRepository.findById(salaryItemId)
                     .orElseThrow(() -> new IllegalArgumentException("Khoản lương không hợp lệ"));
             ssi.setSalaryItem(salaryItem);
             ssi.setAmount(item.getAmount());

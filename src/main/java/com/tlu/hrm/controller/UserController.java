@@ -1,5 +1,6 @@
 package com.tlu.hrm.controller;
 
+import com.tlu.hrm.dto.request.ChangePasswordRequest;
 import com.tlu.hrm.dto.request.UserDto;
 import com.tlu.hrm.dto.response.ApiResponse;
 import com.tlu.hrm.dto.search.SearchDto;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -79,5 +81,12 @@ public class UserController {
     public ResponseEntity<ApiResponse<UserDto>> unlockUser(@PathVariable UUID id) {
         UserDto result = userService.unlockUser(id);
         return ResponseEntity.ok(ApiResponse.success("Mở khóa tài khoản thành công", result));
+    }
+
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(request);
+        return ResponseEntity.ok(ApiResponse.success("Đổi mật khẩu thành công", null));
     }
 }

@@ -1,5 +1,6 @@
 package com.tlu.hrm.service;
 
+import com.tlu.hrm.dto.request.ChangePasswordRequest;
 import com.tlu.hrm.dto.request.UserDto;
 import com.tlu.hrm.dto.search.SearchDto;
 
@@ -17,4 +18,5 @@ public interface UserService {
     boolean existsById(UUID id);
     UserDto lockUser(UUID id);
     UserDto unlockUser(UUID id);
+    void changePassword(ChangePasswordRequest request);
 }
