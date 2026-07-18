@@ -44,6 +44,12 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
     @Autowired
     private TimesheetService timesheetService;
 
+    @Autowired
+    private com.tlu.hrm.repository.UserRepository userRepository;
+
+    @Autowired
+    private com.tlu.hrm.service.NotificationService notificationService;
+
     @Override
     public Page<LeaveRequestDto> search(LeaveRequestSearchRequest request) {
         Specification<LeaveRequest> spec = (root, query, cb) -> {
@@ -187,6 +193,24 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         // Đồng bộ dữ liệu chấm công (Timesheet)
         updateTimesheetsForLeaveRequest(saved);
 
+        // Gửi thông báo cho nhân viên
+        try {
+            if (saved.getRequestStaff() != null) {
+                userRepository.findByStaffId(saved.getRequestStaff().getId()).ifPresent(user -> {
+                    com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                    noti.setTitle("Đơn nghỉ phép đã được phê duyệt");
+                    noti.setContent("Đơn xin nghỉ phép của bạn từ ngày " + saved.getFromDate() + " đến ngày " + saved.getToDate() + " đã được phê duyệt.");
+                    noti.setNotificationType(com.tlu.hrm.enums.NotificationType.LEAVE);
+                    noti.setTargetObjectId(saved.getId());
+                    noti.setLinkUrl("my-leave");
+                    noti.setIsGlobal(false);
+                    notificationService.sendToUsers(noti, List.of(user.getUsername()));
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi thông báo nghỉ phép: " + e.getMessage());
+        }
+
         return new LeaveRequestDto(saved);
     }
 
@@ -205,6 +229,24 @@ public class LeaveRequestServiceImpl implements LeaveRequestService {
         // lại Timesheet để bỏ công phép
         if (oldStatus == LeaveApprovalStatus.APPROVED) {
             updateTimesheetsForLeaveRequest(saved);
+        }
+
+        // Gửi thông báo cho nhân viên
+        try {
+            if (saved.getRequestStaff() != null) {
+                userRepository.findByStaffId(saved.getRequestStaff().getId()).ifPresent(user -> {
+                    com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                    noti.setTitle("Đơn nghỉ phép đã bị từ chối");
+                    noti.setContent("Đơn xin nghỉ phép của bạn từ ngày " + saved.getFromDate() + " đến ngày " + saved.getToDate() + " đã bị từ chối. Lý do: " + (rejectReason != null ? rejectReason : "Không có lý do cụ thể."));
+                    noti.setNotificationType(com.tlu.hrm.enums.NotificationType.LEAVE);
+                    noti.setTargetObjectId(saved.getId());
+                    noti.setLinkUrl("my-leave");
+                    noti.setIsGlobal(false);
+                    notificationService.sendToUsers(noti, List.of(user.getUsername()));
+                });
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi thông báo nghỉ phép: " + e.getMessage());
         }
 
         return new LeaveRequestDto(saved);
