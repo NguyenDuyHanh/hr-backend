@@ -44,6 +44,12 @@ public class TaskServiceImpl implements TaskService {
     @Autowired
     private TaskHistoryService taskHistoryService;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private com.tlu.hrm.service.NotificationService notificationService;
+
     @Override
     public Page<TaskResponse> searchTasks(TaskSearchRequest request) {
         if (request == null) {
@@ -111,20 +117,30 @@ public class TaskServiceImpl implements TaskService {
             task.setProject(project);
 
             if (isNew && task.getCode() == null) {
-                String prefix = project.getCode() != null ? project.getCode() + "-" : "TASK-";
+                String prefix = project.getCode() != null ? project.getCode() + "_" : "TASK_";
+                String legacyPrefix = project.getCode() != null ? project.getCode() + "-" : "TASK-";
                 List<Task> existingTasks = taskRepository.findByProjectId(project.getId());
                 long maxStt = 0;
                 for (Task existingTask : existingTasks) {
                     String existingCode = existingTask.getCode();
-                    if (existingCode != null && existingCode.startsWith(prefix)) {
-                        try {
-                            String suffix = existingCode.substring(prefix.length());
-                            long stt = Long.parseLong(suffix);
-                            if (stt > maxStt) {
-                                maxStt = stt;
+                    if (existingCode != null) {
+                        String matchedPrefix = null;
+                        if (existingCode.startsWith(prefix)) {
+                            matchedPrefix = prefix;
+                        } else if (existingCode.startsWith(legacyPrefix)) {
+                            matchedPrefix = legacyPrefix;
+                        }
+                        
+                        if (matchedPrefix != null) {
+                            try {
+                                String suffix = existingCode.substring(matchedPrefix.length());
+                                long stt = Long.parseLong(suffix);
+                                if (stt > maxStt) {
+                                    maxStt = stt;
+                                }
+                            } catch (NumberFormatException e) {
+                                // Ignored
                             }
-                        } catch (NumberFormatException e) {
-                            // Ignored
                         }
                     }
                 }
@@ -167,27 +183,81 @@ public class TaskServiceImpl implements TaskService {
         task.setIsDeleted(false);
         Task saved = taskRepository.save(task);
 
-        // Lịch sử / Event logging
-        if (isNew) {
-            taskHistoryService.logEvent(saved.getId(), "Tạo mới công việc: " + saved.getName());
-        } else {
-            List<String> changes = new ArrayList<>();
-            if (request.getName() != null && !request.getName().equals(saved.getName())) {
-                changes.add("Đổi tên công việc");
-            }
-            String newStatusName = saved.getStatus() != null ? saved.getStatus().getName() : null;
-            if (newStatusName != null && !newStatusName.equals(oldStatusName)) {
-                changes.add("Đổi trạng thái từ '" + (oldStatusName != null ? oldStatusName : "N/A") + "' sang '"
-                        + newStatusName + "'");
-            }
-            String newAssigneeName = saved.getAssignee() != null ? saved.getAssignee().getDisplayName() : null;
-            if (newAssigneeName != null && !newAssigneeName.equals(oldAssigneeName)) {
-                changes.add("Thay đổi người phụ trách thành '" + newAssigneeName + "'");
-            }
+        // Lịch sử / Event logging & Notifications
+        try {
+            if (isNew) {
+                taskHistoryService.logEvent(saved.getId(), "Tạo mới công việc: " + saved.getName());
+                
+                // Gửi thông báo cho người được giao
+                if (saved.getAssignee() != null) {
+                    userRepository.findByStaffId(saved.getAssignee().getId()).ifPresent(user -> {
+                        com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                        User currentUser = securityUtils.getCurrentUser();
+                        String creatorName = currentUser != null ? (currentUser.getStaff() != null ? currentUser.getStaff().getDisplayName() : currentUser.getUsername()) : "Hệ thống";
+                        noti.setTitle(saved.getCode() + " - " + saved.getName());
+                        noti.setContent(creatorName + " đã giao công việc '" + saved.getName() + "' cho bạn phụ trách.");
+                        noti.setNotificationType(com.tlu.hrm.enums.NotificationType.TASK);
+                        noti.setTargetObjectId(saved.getId());
+                        noti.setLinkUrl("tasks");
+                        noti.setIsGlobal(false);
+                        notificationService.sendToUsers(noti, List.of(user.getUsername()));
+                    });
+                }
+            } else {
+                List<String> changes = new ArrayList<>();
+                if (request.getName() != null && !request.getName().equals(saved.getName())) {
+                    changes.add("Đổi tên công việc");
+                }
+                String newStatusName = saved.getStatus() != null ? saved.getStatus().getName() : null;
+                boolean statusChanged = false;
+                if (newStatusName != null && !newStatusName.equals(oldStatusName)) {
+                    changes.add("Đổi trạng thái từ '" + (oldStatusName != null ? oldStatusName : "N/A") + "' sang '"
+                            + newStatusName + "'");
+                    statusChanged = true;
+                }
+                String newAssigneeName = saved.getAssignee() != null ? saved.getAssignee().getDisplayName() : null;
+                boolean assigneeChanged = false;
+                if (newAssigneeName != null && !newAssigneeName.equals(oldAssigneeName)) {
+                    changes.add("Thay đổi người phụ trách thành '" + newAssigneeName + "'");
+                    assigneeChanged = true;
+                }
 
-            if (!changes.isEmpty()) {
-                taskHistoryService.logEvent(saved.getId(), "Cập nhật công việc: " + String.join(", ", changes));
+                if (!changes.isEmpty()) {
+                    taskHistoryService.logEvent(saved.getId(), "Cập nhật công việc: " + String.join(", ", changes));
+                    
+                    // Nếu đổi người phụ trách, gửi thông báo cho người mới
+                    if (assigneeChanged && saved.getAssignee() != null) {
+                        userRepository.findByStaffId(saved.getAssignee().getId()).ifPresent(user -> {
+                            com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                            User currentUser = securityUtils.getCurrentUser();
+                            String updaterName = currentUser != null ? (currentUser.getStaff() != null ? currentUser.getStaff().getDisplayName() : currentUser.getUsername()) : "Hệ thống";
+                            noti.setTitle(saved.getCode() + " - " + saved.getName());
+                            noti.setContent(updaterName + " đã chuyển giao công việc '" + saved.getName() + "' cho bạn phụ trách.");
+                            noti.setNotificationType(com.tlu.hrm.enums.NotificationType.TASK);
+                            noti.setTargetObjectId(saved.getId());
+                            noti.setLinkUrl("tasks");
+                            noti.setIsGlobal(false);
+                            notificationService.sendToUsers(noti, List.of(user.getUsername()));
+                        });
+                    }
+                    
+                    // Nếu đổi trạng thái, gửi thông báo cho người tạo công việc
+                    if (statusChanged && saved.getCreatedBy() != null) {
+                        com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                        User currentUser = securityUtils.getCurrentUser();
+                        String updaterName = currentUser != null ? (currentUser.getStaff() != null ? currentUser.getStaff().getDisplayName() : currentUser.getUsername()) : "Hệ thống";
+                        noti.setTitle(saved.getCode() + " - " + saved.getName());
+                        noti.setContent(updaterName + " đã cập nhật công việc '" + saved.getName() + "' với trạng thái: " + newStatusName);
+                        noti.setNotificationType(com.tlu.hrm.enums.NotificationType.TASK);
+                        noti.setTargetObjectId(saved.getId());
+                        noti.setLinkUrl("tasks");
+                        noti.setIsGlobal(false);
+                        notificationService.sendToUsers(noti, List.of(saved.getCreatedBy()));
+                    }
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi thông báo task: " + e.getMessage());
         }
 
         return new TaskResponse(saved);
@@ -215,6 +285,25 @@ public class TaskServiceImpl implements TaskService {
 
         taskHistoryService.logEvent(taskId,
                 "Đổi trạng thái từ '" + oldStatusName + "' sang '" + status.getName() + "'");
+
+        // Gửi thông báo đổi trạng thái cho người tạo công việc (Creator)
+        try {
+            if (saved.getCreatedBy() != null) {
+                com.tlu.hrm.dto.request.NotificationDto noti = new com.tlu.hrm.dto.request.NotificationDto();
+                User currentUser = securityUtils.getCurrentUser();
+                String updaterName = currentUser != null ? (currentUser.getStaff() != null ? currentUser.getStaff().getDisplayName() : currentUser.getUsername()) : "Hệ thống";
+                noti.setTitle(saved.getCode() + " - " + saved.getName());
+                noti.setContent(updaterName + " đã cập nhật công việc '" + saved.getName() + "' với trạng thái: " + status.getName());
+                noti.setNotificationType(com.tlu.hrm.enums.NotificationType.TASK);
+                noti.setTargetObjectId(saved.getId());
+                noti.setLinkUrl("tasks");
+                noti.setIsGlobal(false);
+                notificationService.sendToUsers(noti, List.of(saved.getCreatedBy()));
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi gửi thông báo đổi trạng thái task: " + e.getMessage());
+        }
+
         return new TaskResponse(saved);
     }
 

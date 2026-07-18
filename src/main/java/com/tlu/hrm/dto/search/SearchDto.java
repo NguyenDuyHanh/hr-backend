@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import java.io.Serializable;
 import java.util.UUID;
 import com.tlu.hrm.enums.WorkingStatus;
+import com.tlu.hrm.enums.NotificationType;
 
 @Data
 @NoArgsConstructor
@@ -25,4 +26,5 @@ public class SearchDto implements Serializable {
     private UUID positionId;
     private UUID roleId;
     private WorkingStatus workingStatus;
+    private NotificationType notificationType;
 }
