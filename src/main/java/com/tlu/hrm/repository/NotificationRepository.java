@@ -9,10 +9,13 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.UUID;
 
 @Repository
 public interface NotificationRepository extends JpaRepository<Notification, UUID> {
+    List<Notification> findByTargetObjectIdInAndIsDeletedFalse(List<UUID> targetObjectIds);
+
 
     @Query("SELECT n FROM Notification n WHERE n.isDeleted = false AND (" +
            "n.isGlobal = true OR EXISTS (" +
