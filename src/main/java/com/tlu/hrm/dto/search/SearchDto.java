@@ -27,4 +27,5 @@ public class SearchDto implements Serializable {
     private UUID roleId;
     private WorkingStatus workingStatus;
     private NotificationType notificationType;
+    private Integer level;
 }
