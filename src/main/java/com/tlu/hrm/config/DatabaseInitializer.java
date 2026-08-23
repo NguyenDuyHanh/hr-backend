@@ -6,10 +6,16 @@ import com.tlu.hrm.model.User;
 import com.tlu.hrm.model.UserRole;
 import com.tlu.hrm.model.Department;
 import com.tlu.hrm.model.Position;
+import com.tlu.hrm.model.Ethnic;
+import com.tlu.hrm.model.Bank;
+import com.tlu.hrm.model.AdministrativeUnit;
 import com.tlu.hrm.repository.RoleRepository;
 import com.tlu.hrm.repository.UserRepository;
 import com.tlu.hrm.repository.DepartmentRepository;
 import com.tlu.hrm.repository.PositionRepository;
+import com.tlu.hrm.repository.EthnicRepository;
+import com.tlu.hrm.repository.BankRepository;
+import com.tlu.hrm.repository.AdministrativeUnitRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
@@ -39,6 +45,15 @@ public class DatabaseInitializer implements CommandLineRunner {
     private PositionRepository positionRepository;
 
     @Autowired
+    private EthnicRepository ethnicRepository;
+
+    @Autowired
+    private BankRepository bankRepository;
+
+    @Autowired
+    private AdministrativeUnitRepository administrativeUnitRepository;
+
+    @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.username}")
@@ -57,6 +72,9 @@ public class DatabaseInitializer implements CommandLineRunner {
         seedDefaultAdmin();
         seedDepartments();
         seedPositions();
+        seedEthnics();
+        seedBanks();
+        seedAdministrativeUnits();
     }
 
     private void seedRoles() throws Exception {
@@ -212,4 +230,169 @@ public class DatabaseInitializer implements CommandLineRunner {
             }
         }
     }
+
+    private void seedEthnics() throws Exception {
+        if (ethnicRepository.count() > 0) {
+            return;
+        }
+
+        ClassPathResource resource = new ClassPathResource("setup/ethnics.csv");
+        if (resource.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) {
+                        isHeader = false;
+                        continue;
+                    }
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    String[] parts = line.split(",", 3);
+                    if (parts.length >= 2) {
+                        String code = parts[0].trim();
+                        String name = parts[1].trim().replaceAll("^\"|\"$", "");
+                        String description = parts.length >= 3 ? parts[2].trim().replaceAll("^\"|\"$", "") : "";
+
+                        com.tlu.hrm.model.Ethnic ethnic = ethnicRepository.findByCode(code).orElseGet(() -> {
+                            com.tlu.hrm.model.Ethnic e = new com.tlu.hrm.model.Ethnic();
+                            e.setCode(code);
+                            return e;
+                        });
+                        ethnic.setName(name);
+                        ethnic.setDescription(description);
+                        ethnic.setIsDeleted(false);
+                        ethnicRepository.save(ethnic);
+                    }
+                }
+                System.out.println("Ethnics seeded successfully.");
+            }
+        }
+    }
+
+    private void seedBanks() throws Exception {
+        if (bankRepository.count() > 0) {
+            return;
+        }
+
+        ClassPathResource resource = new ClassPathResource("setup/bank.csv");
+        if (resource.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) {
+                        isHeader = false;
+                        continue;
+                    }
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    String[] parts = line.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+                    if (parts.length >= 5) {
+                        String name = parts[1].trim().replaceAll("^\"|\"$", "");
+                        String code = parts[2].trim().replaceAll("^\"|\"$", "");
+                        String bin = parts[3].trim().replaceAll("^\"|\"$", "");
+                        String shortName = parts[4].trim().replaceAll("^\"|\"$", "");
+                        String logo = parts.length > 5 ? parts[5].trim().replaceAll("^\"|\"$", "") : "";
+                        String swiftCode = parts.length > 11 ? parts[11].trim().replaceAll("^\"|\"$", "") : "";
+
+                        com.tlu.hrm.model.Bank bank = bankRepository.findByCode(code).orElseGet(() -> {
+                            com.tlu.hrm.model.Bank b = new com.tlu.hrm.model.Bank();
+                            b.setCode(code);
+                            return b;
+                        });
+                        bank.setName(name);
+                        bank.setShortName(shortName);
+                        bank.setBin(bin);
+                        bank.setLogo(logo);
+                        bank.setSwiftCode(swiftCode);
+                        bank.setIsDeleted(false);
+                        bankRepository.save(bank);
+                    }
+                }
+                System.out.println("Banks seeded successfully.");
+            }
+        }
+    }
+
+    private void seedAdministrativeUnits() throws Exception {
+        if (administrativeUnitRepository.count() > 0) {
+            return;
+        }
+
+        ClassPathResource resource = new ClassPathResource("setup/administrative_units.csv");
+        if (resource.exists()) {
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8))) {
+                String line;
+                boolean isHeader = true;
+                while ((line = reader.readLine()) != null) {
+                    if (isHeader) {
+                        isHeader = false;
+                        continue;
+                    }
+                    if (line.trim().isEmpty()) {
+                        continue;
+                    }
+                    String[] parts = line.split(",", -1);
+                    if (parts.length >= 7) {
+                        String code = parts[0].trim();
+                        String name = parts[1].trim();
+                        String codename = parts[2].trim();
+                        String divisionType = parts[3].trim();
+                        String shortCodename = parts[4].trim();
+                        String phoneCode = parts[5].trim();
+                        int level = 1;
+                        try {
+                            level = Integer.parseInt(parts[6].trim());
+                        } catch (Exception ignored) {
+                        }
+                        String parentCode = parts.length >= 8 ? parts[7].trim() : "";
+
+                        final int unitLevel = level;
+                        final String unitCode = code;
+                        AdministrativeUnit unit = administrativeUnitRepository.findByCodeAndLevel(code, level).orElseGet(() -> {
+                            AdministrativeUnit u = new AdministrativeUnit();
+                            u.setCode(unitCode);
+                            u.setLevel(unitLevel);
+                            return u;
+                        });
+                        unit.setName(name);
+                        unit.setCodename(codename);
+                        unit.setDivisionType(divisionType);
+                        unit.setShortCodename(shortCodename);
+                        unit.setPhoneCode(phoneCode);
+                        unit.setLevel(level);
+                        unit.setIsDeleted(false);
+
+                        if (level == 1) {
+                            unit.setParent(null);
+                            unit.setParentCode(null);
+                        } else if (!parentCode.isEmpty()) {
+                            unit.setParentCode(parentCode);
+                            Optional<AdministrativeUnit> parentOpt = administrativeUnitRepository.findByCodeAndLevel(parentCode, level - 1);
+                            if (parentOpt.isPresent()) {
+                                unit.setParent(parentOpt.get());
+                            } else {
+                                unit.setParent(null);
+                            }
+                        } else {
+                            unit.setParent(null);
+                            unit.setParentCode(null);
+                        }
+
+                        administrativeUnitRepository.save(unit);
+                    }
+                }
+                System.out.println("Administrative Units seeded successfully.");
+            }
+        } else {
+            System.err.println("Setup file setup/administrative_units.csv not found!");
+        }
+    }
 }
+
