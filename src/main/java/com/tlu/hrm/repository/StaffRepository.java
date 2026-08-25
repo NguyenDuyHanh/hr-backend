@@ -1,6 +1,7 @@
 package com.tlu.hrm.repository;
 
 import com.tlu.hrm.model.Staff;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -16,6 +17,18 @@ public interface StaffRepository extends JpaRepository<Staff, UUID> {
     @Query("SELECT s.staffCode FROM Staff s WHERE s.staffCode LIKE 'NV%_%'")
     List<String> findMaxValidStaffCode();
 
+    @EntityGraph(attributePaths = {
+        "department", "position", "ethnic",
+        "permanentAdministrativeUnit", "permanentAdministrativeUnit.parent", "permanentAdministrativeUnit.parent.parent",
+        "currentAdministrativeUnit", "currentAdministrativeUnit.parent", "currentAdministrativeUnit.parent.parent"
+    })
+    java.util.Optional<Staff> findByIdAndIsDeletedFalse(UUID id);
+
+    @EntityGraph(attributePaths = {
+        "department", "position", "ethnic",
+        "permanentAdministrativeUnit", "permanentAdministrativeUnit.parent", "permanentAdministrativeUnit.parent.parent",
+        "currentAdministrativeUnit", "currentAdministrativeUnit.parent", "currentAdministrativeUnit.parent.parent"
+    })
     List<Staff> findByIsDeletedFalse();
 
     @Query("SELECT s FROM Staff s WHERE s.isDeleted = false OR s.isDeleted IS NULL")

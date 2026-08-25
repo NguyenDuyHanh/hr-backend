@@ -56,14 +56,11 @@ public class DatabaseInitializer implements CommandLineRunner {
     @Autowired
     private org.springframework.security.crypto.password.PasswordEncoder passwordEncoder;
 
-    @Value("${app.admin.username}")
+    @Value("${app.admin.username:admin}")
     private String adminUsername;
 
-    @Value("${app.admin.password}")
+    @Value("${app.admin.password:Admin@123}")
     private String adminPassword;
-
-    @Value("${app.admin.email}")
-    private String adminEmail;
 
     @Override
     @Transactional

@@ -1,5 +1,6 @@
 package com.tlu.hrm.service.impl;
 
+import com.tlu.hrm.dto.response.StaffSalaryItemResponse;
 import com.tlu.hrm.model.SalaryItem;
 import com.tlu.hrm.model.Staff;
 import com.tlu.hrm.model.StaffSalaryItem;
@@ -32,6 +33,7 @@ public class SalaryItemServiceImpl implements SalaryItemService {
     private StaffRepository staffRepository;
 
     @Override
+    @Transactional(readOnly = true)
     public List<SalaryItem> getAllSalaryItems() {
         return salaryItemRepository.findAll().stream()
                 .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
@@ -71,15 +73,17 @@ public class SalaryItemServiceImpl implements SalaryItemService {
     }
 
     @Override
-    public List<StaffSalaryItem> getStaffSalaryItems(UUID staffId) {
+    @Transactional(readOnly = true)
+    public List<StaffSalaryItemResponse> getStaffSalaryItems(UUID staffId) {
         return staffSalaryItemRepository.findByStaffId(staffId).stream()
                 .filter(item -> item.getIsDeleted() == null || !item.getIsDeleted())
+                .map(StaffSalaryItemResponse::new)
                 .collect(Collectors.toList());
     }
 
     @Override
     @Transactional
-    public List<StaffSalaryItem> saveStaffSalaryItems(UUID staffId, List<StaffSalaryItem> items) {
+    public List<StaffSalaryItemResponse> saveStaffSalaryItems(UUID staffId, List<StaffSalaryItem> items) {
         Staff staff = staffRepository.findById(staffId)
                 .orElseThrow(() -> new IllegalArgumentException("Nhân viên không tồn tại"));
 
@@ -112,6 +116,9 @@ public class SalaryItemServiceImpl implements SalaryItemService {
             ssi.setAmount(item.getAmount());
             toSave.add(ssi);
         }
-        return staffSalaryItemRepository.saveAll(toSave);
+        List<StaffSalaryItem> saved = staffSalaryItemRepository.saveAll(toSave);
+        return saved.stream()
+                .map(StaffSalaryItemResponse::new)
+                .collect(Collectors.toList());
     }
 }

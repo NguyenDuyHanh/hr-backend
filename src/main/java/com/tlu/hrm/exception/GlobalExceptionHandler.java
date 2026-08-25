@@ -18,6 +18,11 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthenticationException(AuthenticationException ex) {
+        System.err.println("=== Authentication Exception ===");
+        System.err.println("Exception class: " + ex.getClass().getName());
+        System.err.println("Exception message: " + ex.getMessage());
+        ex.printStackTrace();
+
         String message = "Tài khoản hoặc mật khẩu không chính xác";
         if (ex instanceof DisabledException || ex instanceof LockedException) {
             message = "Tài khoản đã bị khóa hoặc vô hiệu hóa";
