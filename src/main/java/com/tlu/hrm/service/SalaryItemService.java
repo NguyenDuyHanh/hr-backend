@@ -1,5 +1,6 @@
 package com.tlu.hrm.service;
 
+import com.tlu.hrm.dto.response.StaffSalaryItemResponse;
 import com.tlu.hrm.model.SalaryItem;
 import com.tlu.hrm.model.StaffSalaryItem;
 
@@ -10,6 +11,6 @@ public interface SalaryItemService {
     List<SalaryItem> getAllSalaryItems();
     SalaryItem saveSalaryItem(SalaryItem item);
     void deleteSalaryItem(UUID id);
-    List<StaffSalaryItem> getStaffSalaryItems(UUID staffId);
-    List<StaffSalaryItem> saveStaffSalaryItems(UUID staffId, List<StaffSalaryItem> items);
+    List<StaffSalaryItemResponse> getStaffSalaryItems(UUID staffId);
+    List<StaffSalaryItemResponse> saveStaffSalaryItems(UUID staffId, List<StaffSalaryItem> items);
 }

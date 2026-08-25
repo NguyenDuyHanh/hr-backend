@@ -31,7 +31,7 @@ public class BankController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách ngân hàng thành công", result));
     }
 
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<ApiResponse<List<BankDto>>> getAllBanks() {
         List<BankDto> result = bankService.getAllBanks();
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ danh sách ngân hàng thành công", result));

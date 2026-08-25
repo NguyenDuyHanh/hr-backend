@@ -31,7 +31,7 @@ public class EthnicController {
         return ResponseEntity.ok(ApiResponse.success("Lấy danh sách dân tộc thành công", result));
     }
 
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<ApiResponse<List<EthnicDto>>> getAllEthnics() {
         List<EthnicDto> result = ethnicService.getAllEthnics();
         return ResponseEntity.ok(ApiResponse.success("Lấy toàn bộ danh sách dân tộc thành công", result));

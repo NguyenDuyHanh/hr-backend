@@ -1,13 +1,21 @@
 package com.tlu.hrm.service.impl;
 
+import com.tlu.hrm.dto.request.StaffCertificateDto;
 import com.tlu.hrm.dto.request.StaffDto;
 import com.tlu.hrm.dto.search.SearchDto;
 import com.tlu.hrm.model.Staff;
+import com.tlu.hrm.model.StaffBankAccount;
+import com.tlu.hrm.model.StaffCertificate;
 import com.tlu.hrm.model.User;
 import com.tlu.hrm.enums.WorkingStatus;
 import com.tlu.hrm.enums.Gender;
+import com.tlu.hrm.repository.AdministrativeUnitRepository;
+import com.tlu.hrm.repository.BankRepository;
 import com.tlu.hrm.repository.DepartmentRepository;
+import com.tlu.hrm.repository.EthnicRepository;
 import com.tlu.hrm.repository.PositionRepository;
+import com.tlu.hrm.repository.StaffBankAccountRepository;
+import com.tlu.hrm.repository.StaffCertificateRepository;
 import com.tlu.hrm.repository.StaffRepository;
 import com.tlu.hrm.repository.UserRepository;
 import com.tlu.hrm.service.StaffService;
@@ -19,6 +27,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,9 +48,23 @@ public class StaffServiceImpl implements StaffService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AdministrativeUnitRepository administrativeUnitRepository;
+
+    @Autowired
+    private EthnicRepository ethnicRepository;
+
+    @Autowired
+    private BankRepository bankRepository;
+
+    @Autowired
+    private StaffCertificateRepository staffCertificateRepository;
+
+    @Autowired
+    private StaffBankAccountRepository staffBankAccountRepository;
+
     private List<Staff> getFilteredStaffList(SearchDto searchDto) {
-        return staffRepository.findAll().stream()
-                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
+        return staffRepository.findByIsDeletedFalse().stream()
                 .filter(staff -> {
                     if (searchDto != null) {
                         // 1. Keyword search
@@ -76,7 +99,7 @@ public class StaffServiceImpl implements StaffService {
                                 return false;
                             }
                         }
-                        // 3. Custom role filter for recruitment approvers (ADMIN, HR_MANAGER, HR_RECRUITMENT)
+                        // 3. Custom role filter for recruitment approvers
                         if ("recruitment_approvers".equals(searchDto.getExtWhereClause())) {
                             User user = userRepository.findByStaffId(staff.getId()).orElse(null);
                             if (user == null) {
@@ -93,12 +116,12 @@ public class StaffServiceImpl implements StaffService {
                                 return false;
                             }
                         }
-                        // 4. Custom filter for staff without user accounts (optionally ignoring a specific user ID)
+                        // 4. Custom filter for staff without user accounts
                         if (searchDto.getExtWhereClause() != null && searchDto.getExtWhereClause().startsWith("no_account")) {
                             User user = userRepository.findByStaffId(staff.getId()).orElse(null);
                             if (user != null) {
                                 if (searchDto.getExtWhereClause().length() > 10) {
-                                    String currentUserIdStr = searchDto.getExtWhereClause().substring(11); // "no_account_".length() = 11
+                                    String currentUserIdStr = searchDto.getExtWhereClause().substring(11);
                                     try {
                                         java.util.UUID currentUserId = java.util.UUID.fromString(currentUserIdStr);
                                         if (user.getId().equals(currentUserId)) {
@@ -131,7 +154,7 @@ public class StaffServiceImpl implements StaffService {
         int fromIndex = pageNum * size;
         int toIndex = Math.min(fromIndex + size, total);
 
-        List<StaffDto> pageContent = new java.util.ArrayList<>();
+        List<StaffDto> pageContent = new ArrayList<>();
         if (fromIndex < total) {
             pageContent = filteredList.subList(fromIndex, toIndex).stream()
                     .map(StaffDto::new)
@@ -143,16 +166,14 @@ public class StaffServiceImpl implements StaffService {
 
     @Override
     public List<StaffDto> getAllStaffsUnpaginated() {
-        return staffRepository.findAll().stream()
-                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
+        return staffRepository.findByIsDeletedFalse().stream()
                 .map(StaffDto::new)
                 .collect(Collectors.toList());
     }
 
     @Override
     public Optional<StaffDto> getStaffById(UUID id) {
-        return staffRepository.findById(id)
-                .filter(staff -> staff.getIsDeleted() == null || !staff.getIsDeleted())
+        return staffRepository.findByIdAndIsDeletedFalse(id)
                 .map(StaffDto::new);
     }
 
@@ -207,32 +228,92 @@ public class StaffServiceImpl implements StaffService {
         staff.setAvatarUrl(dto.getAvatarUrl());
         staff.setBirthPlace(dto.getBirthPlace());
         staff.setNationality(dto.getNationality());
-        staff.setEthnics(dto.getEthnics());
+
+        if (dto.getEthnicId() != null) {
+            ethnicRepository.findById(dto.getEthnicId()).ifPresent(staff::setEthnic);
+        } else {
+            staff.setEthnic(null);
+        }
+
         staff.setReligion(dto.getReligion());
         staff.setEducationDegree(dto.getEducationDegree());
-        staff.setProvince(dto.getProvince());
-        staff.setCommune(dto.getCommune());
-        staff.setPermanentResidence(dto.getPermanentResidence());
-        staff.setCurrentResidence(dto.getCurrentResidence());
+
+        // Permanent Administrative Unit
+        UUID permUnitId = dto.getPermanentAdministrativeUnitId() != null ? dto.getPermanentAdministrativeUnitId() : dto.getPermanentWardId();
+        if (permUnitId != null) {
+            administrativeUnitRepository.findById(permUnitId).ifPresent(staff::setPermanentAdministrativeUnit);
+        } else {
+            staff.setPermanentAdministrativeUnit(null);
+        }
+        staff.setPermanentAddressDetail(dto.getPermanentAddressDetail());
+
+        // Current Administrative Unit
+        UUID currUnitId = dto.getCurrentAdministrativeUnitId() != null ? dto.getCurrentAdministrativeUnitId() : dto.getCurrentWardId();
+        if (currUnitId != null) {
+            administrativeUnitRepository.findById(currUnitId).ifPresent(staff::setCurrentAdministrativeUnit);
+        } else {
+            staff.setCurrentAdministrativeUnit(null);
+        }
+        staff.setCurrentAddressDetail(dto.getCurrentAddressDetail());
+
         staff.setIdNumberIssueDate(dto.getIdNumberIssueDate());
         staff.setIdNumberIssueBy(dto.getIdNumberIssueBy());
         staff.setCompanyEmail(dto.getCompanyEmail());
         staff.setTaxCode(dto.getTaxCode());
         staff.setHealthInsuranceNumber(dto.getHealthInsuranceNumber());
-        staff.setBankName(dto.getBankName());
-        staff.setBankAccountNumber(dto.getBankAccountNumber());
-        staff.setBankAccountName(dto.getBankAccountName());
-        staff.setBankBin(dto.getBankBin());
+
         staff.setAnnualLeave(dto.getAnnualLeave());
 
         Staff savedStaff = staffRepository.save(staff);
+
+        // Update certificates if provided
+        if (dto.getCertificates() != null) {
+            for (StaffCertificateDto certDto : dto.getCertificates()) {
+                StaffCertificate cert;
+                if (certDto.getId() != null) {
+                    cert = staffCertificateRepository.findById(certDto.getId()).orElse(new StaffCertificate());
+                } else {
+                    cert = new StaffCertificate();
+                }
+                cert.setStaff(savedStaff);
+                cert.setType(certDto.getType());
+                cert.setCertificateName(certDto.getCertificateName());
+                cert.setInstitution(certDto.getInstitution());
+                cert.setMajor(certDto.getMajor());
+                cert.setDegreeLevel(certDto.getDegreeLevel());
+                cert.setIssueDate(certDto.getIssueDate());
+                cert.setExpiryDate(certDto.getExpiryDate());
+                cert.setGrade(certDto.getGrade());
+                cert.setCredentialId(certDto.getCredentialId());
+                cert.setFileUrl(certDto.getFileUrl());
+                cert.setNote(certDto.getNote());
+                staffCertificateRepository.save(cert);
+            }
+        }
+
+        // Update bank accounts if provided (or single default bank account from dto)
+        if (dto.getBankId() != null && (dto.getBankAccounts() == null || dto.getBankAccounts().isEmpty())) {
+            bankRepository.findById(dto.getBankId()).ifPresent(bank -> {
+                StaffBankAccount acc = staffBankAccountRepository.findByStaffIdAndIsDefaultTrueAndIsDeletedFalse(savedStaff.getId())
+                        .orElseGet(() -> {
+                            StaffBankAccount newAcc = new StaffBankAccount();
+                            newAcc.setStaff(savedStaff);
+                            return newAcc;
+                        });
+                acc.setBank(bank);
+                acc.setAccountNumber(dto.getBankAccountNumber() != null ? dto.getBankAccountNumber() : "");
+                acc.setAccountName(dto.getBankAccountName() != null ? dto.getBankAccountName() : savedStaff.getDisplayName());
+                acc.setIsDefault(true);
+                staffBankAccountRepository.save(acc);
+            });
+        }
+
         return new StaffDto(savedStaff);
     }
 
     @Override
     public void deleteStaff(UUID id) {
         staffRepository.findById(id).ifPresent(staff -> {
-            // Ngắt liên kết với tài khoản User (nếu có)
             userRepository.findByStaffId(id).ifPresent(user -> {
                 user.setStaff(null);
                 userRepository.save(user);
@@ -252,16 +333,13 @@ public class StaffServiceImpl implements StaffService {
 
     @Override
     public String generateStaffCode() {
-        // 1. Tạo tiền tố dựa trên năm và tháng hiện tại (Ví dụ: NV2605_)
         java.time.LocalDate now = java.time.LocalDate.now();
         String year = String.format("%02d", now.getYear() % 100);
         String month = String.format("%02d", now.getMonthValue());
         String prefix = "NV" + year + month + "_";
 
-        // 2. Lấy tất cả mã nhân viên có định dạng NV..._... từ Repository
-        java.util.List<String> codes = staffRepository.findMaxValidStaffCode();
+        List<String> codes = staffRepository.findMaxValidStaffCode();
 
-        // 3. Tìm mã có số thứ tự (phần sau dấu _) lớn nhất trong toàn hệ thống
         String maxCode = codes.stream()
                 .filter(code -> code.matches("^NV[0-9]{4}_[0-9]{3}$"))
                 .max(java.util.Comparator.comparingInt(code -> Integer.parseInt(code.substring(code.indexOf("_") + 1))))
@@ -274,12 +352,9 @@ public class StaffServiceImpl implements StaffService {
                 if (parts.length == 2) {
                     nextNumber = Integer.parseInt(parts[1]) + 1;
                 }
-            } catch (NumberFormatException ignored) {
-                // Nếu parse lỗi thì mặc định bắt đầu từ 1
-            }
+            } catch (NumberFormatException ignored) {}
         }
 
-        // 4. Kết hợp tiền tố hiện tại với số thứ tự mới (Ví dụ: NV2605_005)
         return prefix + String.format("%03d", nextNumber);
     }
 
@@ -309,10 +384,10 @@ public class StaffServiceImpl implements StaffService {
         return ExcelUtil.exportToExcel("Danh sách nhân viên", headers, filteredList,
                 (dto, row, style, centerStyle, stt) -> {
                     int col = 0;
-                    ExcelUtil.writeCell(row, col++, stt, centerStyle); // STT (center)
-                    ExcelUtil.writeCell(row, col++, dto.getStaffCode(), centerStyle); // Mã NV (center)
+                    ExcelUtil.writeCell(row, col++, stt, centerStyle);
+                    ExcelUtil.writeCell(row, col++, dto.getStaffCode(), centerStyle);
                     ExcelUtil.writeCell(row, col++, dto.getDisplayName(), style);
-                    ExcelUtil.writeCell(row, col++, dto.getBirthDate(), centerStyle); // Ngày sinh (center)
+                    ExcelUtil.writeCell(row, col++, dto.getBirthDate(), centerStyle);
 
                     String genderStr = "";
                     if (dto.getGender() != null) {
@@ -322,11 +397,11 @@ public class StaffServiceImpl implements StaffService {
                             case OTHER -> "Khác";
                         };
                     }
-                    ExcelUtil.writeCell(row, col++, genderStr, centerStyle); // Giới tính (center)
+                    ExcelUtil.writeCell(row, col++, genderStr, centerStyle);
                     ExcelUtil.writeCell(row, col++, dto.getPhoneNumber(), style);
                     ExcelUtil.writeCell(row, col++, dto.getEmail(), style);
                     ExcelUtil.writeCell(row, col++, dto.getIdNumber(), style);
-                    ExcelUtil.writeCell(row, col++, dto.getStartDate(), centerStyle); // Ngày vào làm (center)
+                    ExcelUtil.writeCell(row, col++, dto.getStartDate(), centerStyle);
                     String workingStatusStr = "";
                     if (dto.getWorkingStatus() != null) {
                         workingStatusStr = switch (dto.getWorkingStatus()) {

@@ -6,10 +6,13 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.tlu.hrm.enums.EducationDegree;
 import com.tlu.hrm.enums.Gender;
 import com.tlu.hrm.enums.WorkingStatus;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "tbl_staff")
@@ -72,27 +75,31 @@ public class Staff extends BaseModel {
     @Column(name = "nationality")
     private String nationality;
 
-    @Column(name = "ethnics")
-    private String ethnics;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "ethnic_id")
+    private Ethnic ethnic;
 
     @Column(name = "religion")
     private String religion;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "education_degree")
-    private String educationDegree;
+    private EducationDegree educationDegree;
 
     // 2. Address
-    @Column(name = "province")
-    private String province;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "permanent_administrative_unit_id")
+    private AdministrativeUnit permanentAdministrativeUnit;
 
-    @Column(name = "commune")
-    private String commune;
+    @Column(name = "permanent_address_detail")
+    private String permanentAddressDetail;
 
-    @Column(name = "permanent_residence")
-    private String permanentResidence;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "current_administrative_unit_id")
+    private AdministrativeUnit currentAdministrativeUnit;
 
-    @Column(name = "current_residence")
-    private String currentResidence;
+    @Column(name = "current_address_detail")
+    private String currentAddressDetail;
 
     // 3. Legal docs
     @Column(name = "id_number_issue_date")
@@ -111,18 +118,12 @@ public class Staff extends BaseModel {
     @Column(name = "health_insurance_number")
     private String healthInsuranceNumber;
 
-    @Column(name = "bank_name")
-    private String bankName;
-
-    @Column(name = "bank_account_number")
-    private String bankAccountNumber;
-
-    @Column(name = "bank_account_name")
-    private String bankAccountName;
-
-    @Column(name = "bank_bin")
-    private String bankBin;
-
     @Column(name = "annual_leave")
     private Double annualLeave = 12.0;
+
+    @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StaffCertificate> certificates = new ArrayList<>();
+
+    @OneToMany(mappedBy = "staff", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<StaffBankAccount> bankAccounts = new ArrayList<>();
 }
