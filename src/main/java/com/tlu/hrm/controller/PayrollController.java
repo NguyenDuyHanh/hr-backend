@@ -1,11 +1,9 @@
 package com.tlu.hrm.controller;
 
 import com.tlu.hrm.dto.response.ApiResponse;
-import com.tlu.hrm.model.Period;
+import com.tlu.hrm.dto.response.payslip.PayslipResponse;
 import com.tlu.hrm.model.Payroll;
 import com.tlu.hrm.model.Payslip;
-import com.tlu.hrm.model.SalaryItem;
-import com.tlu.hrm.model.StaffSalaryItem;
 import com.tlu.hrm.security.SecurityUtils;
 import com.tlu.hrm.service.PayrollService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,10 +11,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.format.annotation.DateTimeFormat;
+import java.util.stream.Collectors;
 
 import static com.tlu.hrm.enums.RoleType.Constants.*;
 
@@ -60,16 +57,22 @@ public class PayrollController {
 
     @PostMapping("/{id}/calculate")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
-    public ResponseEntity<ApiResponse<List<Payslip>>> calculatePayroll(@PathVariable UUID id) {
-        List<Payslip> result = payrollService.calculatePayroll(id);
+    public ResponseEntity<ApiResponse<List<PayslipResponse>>> calculatePayroll(@PathVariable UUID id) {
+        List<Payslip> entityList = payrollService.calculatePayroll(id);
+        List<PayslipResponse> result = entityList.stream()
+                .map(PayslipResponse::fromEntity)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Tính lương thành công", result));
     }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "', '"
             + HR_EMPLOYEE + "')")
-    public ResponseEntity<ApiResponse<List<Payslip>>> getPayrollDetails(@PathVariable UUID id) {
-        List<Payslip> result = payrollService.getPayrollDetails(id);
+    public ResponseEntity<ApiResponse<List<PayslipResponse>>> getPayrollDetails(@PathVariable UUID id) {
+        List<Payslip> entityList = payrollService.getPayrollDetails(id);
+        List<PayslipResponse> result = entityList.stream()
+                .map(PayslipResponse::fromEntity)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(ApiResponse.success("Lấy chi tiết bảng lương thành công", result));
     }
 
@@ -97,19 +100,21 @@ public class PayrollController {
     @GetMapping("/my-payslip")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "', '"
             + HR_EMPLOYEE + "')")
-    public ResponseEntity<ApiResponse<Payslip>> getMyPayslip(@RequestParam UUID periodId) {
+    public ResponseEntity<ApiResponse<PayslipResponse>> getMyPayslip(@RequestParam UUID periodId) {
         com.tlu.hrm.model.User currentUser = securityUtils.getCurrentUser();
-        Payslip result = payrollService.getMyPayslip(periodId, currentUser);
+        Payslip entity = payrollService.getMyPayslip(periodId, currentUser);
+        PayslipResponse result = PayslipResponse.fromEntity(entity);
         return ResponseEntity.ok(ApiResponse.success("Lấy phiếu lương của tôi thành công", result));
     }
 
     @PutMapping("/payslip/{id}")
     @PreAuthorize("hasAnyAuthority('" + ROLE_ADMIN + "', '" + HR_MANAGER + "', '" + HR_COMPENSATION_BENEFIT + "')")
-    public ResponseEntity<ApiResponse<Payslip>> updatePayslip(
+    public ResponseEntity<ApiResponse<PayslipResponse>> updatePayslip(
             @PathVariable UUID id,
             @RequestParam com.tlu.hrm.enums.PaidStatus paidStatus,
             @RequestParam(required = false) String note) {
-        Payslip result = payrollService.updatePayslip(id, paidStatus, note);
+        Payslip entity = payrollService.updatePayslip(id, paidStatus, note);
+        PayslipResponse result = PayslipResponse.fromEntity(entity);
         return ResponseEntity.ok(ApiResponse.success("Cập nhật phiếu lương thành công", result));
     }
 }
