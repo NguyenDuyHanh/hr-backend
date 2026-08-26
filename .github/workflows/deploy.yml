@@ -44,7 +44,7 @@ jobs:
             
             # Refresh backend service inside Docker Compose
             cd /opt/apps/hrm
-            docker compose up -d --build --no-deps hr-backend
+            docker compose up -d --build --no-deps backend
             
             # Prune obsolete dangling Docker images
             docker image prune -f
