@@ -37,13 +37,13 @@ jobs:
           port: 22
           script: |
             # Navigate to backend directory on VPS
-            cd /opt/hrm/hr-backend
+            cd /opt/apps/hrm/hr-backend
             
             # Pull latest changes
             git pull origin develop
             
             # Refresh backend service inside Docker Compose
-            cd /opt/hrm
+            cd /opt/apps/hrm
             docker compose up -d --build --no-deps hr-backend
             
             # Prune obsolete dangling Docker images
